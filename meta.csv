@@ -1,20 +1,20 @@
 value
-Date
+date
 CN: GDP
-CN: GDP.1
+CN: GDP: ytd
+CN: Share to GDP Growth: ytd: Final Consumption Expenditure
+CN: Share to GDP Growth: ytd: Gross Capital Formation
+CN: Share to GDP Growth: ytd: Net Export of Goods and Service
 CN: Consumer Price Index
 CN: CPI: Core (excl. Food & Energy)
 CN: Producer Price Index(PPI)
 CN: Unemployment Rate: Urban Survey
 CN: Unemployment Rate: 31-City Survey
+CN: Employment: Urban: New Increased: ytd
 CN: Leverage Ratio: Household
 CN: Leverage Ratio: Non-financial Enterprise
 CN: Leverage Ratio: General Government
-CN: Leverage Ratio: Central Government
-CN: Leverage Ratio: Local Government
 CN: Leverage Ratio: Non-financial Sector
-CN: Leverage Ratio: Financial Sector: Asset Side
-CN: Leverage Ratio: Financial Sector: Liability Side
 "CN: Purchasing Managers"" Index: Mfg"
 CN: PMI: Mfg: Production
 CN: PMI: Mfg: New Order
@@ -41,7 +41,6 @@ CN: PMI: Construction: Input Price
 CN: PMI: Construction: Sales Price
 CN: PMI: Construction: Employment
 CN: PMI: Construction: Business Expectation
-CN: Transport: Freight Traffic
 CN: Retail Sales of Consumer Goods
 CN: Online Retail Sales: ytd: Goods and Service
 CN: Taobao and Tmall Online Sales: Value
@@ -56,6 +55,8 @@ CN: Value Added of Industry: YoY: ytd(Real)
 CN: Fixed Asset Investment: ytd
 CN: FAI: ytd: Private
 CN: Fixed Asset Investment: Approved Project: Investment Amount
+CN: Transport: Freight Traffic
+CN: Electricity Production
 CN: Real Estate Inv: ytd
 CN: Building Sold: ytd
 CN: Floor Space Started: ytd: Commodity Bldg (CB)
@@ -64,13 +65,15 @@ CN: Floor Space Completed: ytd: Commodity Bldg (CB)
 CN: Floor Space Sold: ytd
 CN: Govt Revenue: ytd
 CN: Govt Expenditure: ytd
-CN: Local Government Debt Issuance
+CN: Govt Revenue: Tax: ytd
+CN: Government Revenue: ytd: Fund
 CN: Local Government Debt Issuance: General
 CN: Local Government Debt Issuance: Special
 CN: Local Government Debt Issuance: New
 CN: Local Government Debt Issuance: Replacement or Refinancing
 CN: BoP: Net Errors and Omissions
 CN: BoP: FA: Reserve Asset
+CN: BoP: FA: Non-reserve
 CN: BoP: Current Account(CA)
 CN: Trade Balance
 CN: Import CIF
@@ -80,17 +83,11 @@ CN: Domestic RMB Financial Asset Held by Overseas Entity: Bond
 CN: Domestic RMB Financial Asset Held by Overseas Entity: Loan
 CN: Domestic RMB Financial Asset Held by Overseas Entity: Deposit
 CN: FDI: Utilized: ytd (annual data included all finance)
-CN: BoP: FA: Non-reserve
 CN: Employment: Rural
 CN: Employment: Urban
-CN: Employment
 CN: Employment: Primary Industry
 CN: Employment: Secondary Industry
 CN: Employment: Tertiary Industry
-CN: Employment: Urban: New Increased: ytd
-CN: No of Employee: Private & Individual
-"CN: No of Employee: Private & Individual: Farming, Forestry Animal Husbandry & Fishery"
-CN: No of Employee: Private & Individual: Mining
 CN: No of Employee: Private & Individual: Manufacturing
 CN: No of Employee: Private & Individual: Construction
 "CN: No of Employee: Private & Individual: Transportation, Storage & Post"
@@ -98,7 +95,6 @@ CN: No of Employee: Private & Individual: Wholesale & Retail Trade
 CN: No of Employee: Private & Individual: Accommodation & Catering Trade
 CN: No of Employee: Private & Individual: Leasing & Commercial Service
 "CN: No of Employee: Private & Individual: Resident, Repair and Other Services"
-CN: No of Employee: Urban Non-private
 CN: No of Employee: Urban Non-private: Mining
 "CN: No of Employee: Urban Non-private: Farming, Forestry Animal Husbandry & Fishery"
 CN: No of Employee: Urban Non-private: Manufacturing
@@ -139,8 +135,6 @@ CN: China Commodity Index (CCI)
 CN: Bond Outstanding: PBC: Government Bond
 CN: Bond Outstanding: PBC: Financial Bond
 CN: Bond Outstanding: PBC: Company Credit Bond
-CN: Bond Outstanding: PBC
-CN: Bond Issuance: PBC
 CN: Bond Issuance: PBC: Government Bond
 CN: Bond Issuance: PBC: Financial Bond
 CN: Bond Issuance: PBC: Company Credit Bond
@@ -157,10 +151,8 @@ CN: Aggregate Financing: New Increased: Net Corporate Bond Financing
 CN: Aggregate Financing: New Increased: Government Bond
 CN: Aggregate Financing: New Increased: Non Financial Enterprise Equity Financing
 CN: Aggregate Financing: New Increased: Other Financing: Depository Financial Inst. Asset-backed Securities
-CN: Loan: New Increased: Household
 CN: Loan: New Increased: Household: Short Term
 CN: Loan: New Increased: Household: Medium & Long Term
-CN: Loan: New Increased: Non Financial Enterprise and Govt Agency & Org
 CN: Loan: New Increased: Non Financial Enterprise and Govt Agency & Org: Short Term
 CN: Loan: New Increased: Non Financial Enterprise and Govt Agency & Org: Bill Financing
 CN: Loan: New Increased: Non Financial Enterprise and Govt Agency & Org: Medium & Long Term
@@ -180,5 +172,3 @@ CN: Industrial Production: Household Refrigerator
 CN: Industrial Production: Household Washing Machine
 CN: Industrial Production: Semiconductor Integrated Circuit
 CN: Industrial Production: Television Set: Colour
-CN: Industrial Production: ytd: Power Generated
-CN: Industrial Production: ytd: Power Generated: Thermal Power

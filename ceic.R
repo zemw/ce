@@ -87,7 +87,7 @@ ceic_load <- function(file, parallel = FALSE) {
       mts <- .series %>% reduce(~merge(.x, .y))
       lbs <- .metadata %>% pull(seriesName)
       tbl <- data.frame(.= zoo::index(mts), mts) %>% as_tibble
-      names(tbl) <- make.unique(c("Date", lbs))
+      names(tbl) <- make.unique(c("date", lbs))
       tbl
     }, 
     

@@ -1,6 +1,6 @@
 ---
 title: "Chinese Economy Snapshot"
-date: "August 2021"
+date: "October 2021"
 output: ioslides_presentation
 ---
 

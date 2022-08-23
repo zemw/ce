@@ -1,69 +1,31 @@
 ---
-title: "Chinese Economy Snapshot"
-date: "March 2022"
+title: "Chinese Economy Charts"
+date: "August 2022"
 output: ioslides_presentation
 ---
 
 <!-- TODO: Blank page after Title page -->
 
 ```{r, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
-```
-
-```{r, include=FALSE}
 library(tidyverse)
 library(lubridate)
 library(patchwork)
-library(scales)
-```
+library(forecast)
+library(csutil)
+library(broom)
+library(zoo)
 
-```{r, include=FALSE}
-ggplot2::theme_set(theme_bw() + theme(
-  panel.grid.major.x = element_blank(), 
-  panel.grid.minor.x = element_blank(), 
-  panel.grid.minor.y = element_blank(),
-  strip.background = element_blank(),
-  legend.title = element_blank(), 
-  legend.position = "bottom", 
-  axis.title = element_blank(),
-  plot.caption = element_text(hjust=0),
-  plot.title = element_text(hjust=.5)
-  ))
-# ggplot2::update_geom_defaults("line", list(color="red"))
-```
+# load data
+df = parse2DF("data.m")
+df$nameLocal = abbr(df$seriesName, "cd")
+dfq = filter(df, frequency == "Quarterly")
+dfm = filter(df, frequency == "Monthly")
+tsq = grabTS(dfq, out = "ts") %>% window(start=2010)
+tsm = grabTS(dfm, out = "ts") %>% window(start=2010)
+colnames(tsq) = dfq$nameLocal
+colnames(tsm) = dfm$nameLocal
 
-```{r, include=FALSE}
-source("ceic.R")
-ceic <- ceic_load("data.m")
-data <- ceic$fetch_all()
-#saveRDS(data, "data.Rda")
-```
-
-```{r, include=FALSE}
-# data <- readRDS("data.Rda")
-# meta <- names(data) %>% as_tibble()
-# meta %>% write_csv("meta.csv")
-```
-
-```{r, include=FALSE}
-shorten_name <- function(name, level=1, prefix=NULL, suffix=NULL, exclude=NULL) {
-  map_chr(name, function(.name) {
-    trms <- str_split(.name, ": ", simplify = T)
-    excl <- str_c(c("CN", "YoY", "ytd", exclude), collapse = "|")
-    subs <- str_subset(trms, excl, negate = T)
-    comb <- str_c(tail(subs, level), collapse = ":")
-    str_c(prefix, comb, suffix, sep = " ")
-  })
-}
-```
-
-```{r time-horizon, include=FALSE}
-last_one_year <- 12
-last_two_years <- 12*2
-last_three_years <- 12*3
-last_five_years <- 12*5
-last_ten_years <- 12*10
-last_forty_years <- 12*20
+knitr::opts_chunk$set(echo = F, warning = F, message = F)
 ```
 
 <!-- # Overview -->
@@ -71,64 +33,40 @@ last_forty_years <- 12*20
 ## Gross Demestic Product
 
 ```{r}
-data %>% 
-  select(date, GDP = `CN: GDP`, `GDP Gap` = `CN: GDP: ytd`) %>% 
-  tail(last_ten_years) %>% 
-  drop_na() %>% 
-  pivot_longer(!date) %>% 
-  mutate(value = value*10^9) %>% 
-  ggplot(aes(date, value, col=name)) + 
-  geom_line() + 
-  scale_y_continuous(labels = label_number_si()) + 
-  facet_wrap(~name, scales = "free_y") +
-  theme(legend.position = "none", aspect.ratio = .8) + 
-  labs(caption = "Seasonally adjusted quarterly data")
+gdpGap = trans(log(tsq[,'GDP']), seasAdj="seats", hpFilter="cycle")
+dualplot(y1 = 100*gdpGap, y2 = 4*(tsq[,'GDPIQQSA']-100), 
+         lylim = c(-3,3), rylim = c(-20,20),
+         ylab = "GDP Gap (HP-Filtered %)", ylab.at = 0,
+         rylab = "Annualized Quarterly Growth %")
+abline(h=0, col="gray")
 ```
 
 ## Inflation
 
 ```{r}
-data %>% select(date, 
-         CPI = `CN: Consumer Price Index`, 
-         `Core CPI` = `CN: CPI: Core (excl. Food & Energy)`,
-         PPI = `CN: Producer Price Index(PPI)`) %>% 
-  tail(last_ten_years) %>% 
-  pivot_longer(!date) %>% 
-  mutate(group=if_else(name=="PPI", "Producer Price", "Consumer Price")) %>% 
-  ggplot(aes(date, value, col=name)) + 
-  facet_wrap(~group) + geom_line() +
-  theme(aspect.ratio = 0.8) +
-  labs(caption = "Last year = 100")
+dualplot(tsm[,'CPI']-100, tsm[,'PPIPPI']-100, ylab = "CPI (YoY)", rylab = "PPI (YoY)")
 ```
 
 ## Unemployment
 
 ```{r}
-data %>% 
-  select(date, contains(c("Unemployment", "Employment: Urban: New Increased"))) %>% 
-  tail(last_five_years) %>% 
-  fill(!date, .direction = "up") %>% 
-  pivot_longer(!date) %>% 
-  mutate(label=shorten_name(name, 2)) %>% 
-  mutate(group=if_else(str_detect(name, "Unemployment"), "Unemployment Rate", "New Urban Employment")) %>% 
-  mutate(value=if_else(group=="New Urban Employment", value*1000, value)) %>% 
-  ggplot(aes(date, value, col=label)) + geom_line() +
-  facet_wrap(~group, scales = "free_y") +
-  scale_y_continuous(labels = label_number_si()) +
-  theme(aspect.ratio = .8)
+newEmp = tsm[,'EUNI'] %>% 
+  window(start = 2013) %>% 
+  trans(unit = 1/1000, disYTD = T, naFill = "kalman", chg="ttm")
+unemp = tsm[,'SURU31MC'] %>% 
+  window(start=2014) %>% 
+  trans(naFill = "kalman")
+dualplot(newEmp, unemp, 
+         ylab = "New Urban Employment (Million TTM)", 
+         rylab = "Unemployment Rate (31 Major Cities)")
 ```
 
 ## National Debt / GDP
 
 ```{r}
-data %>% 
-  select(date, contains("Leverage Ratio")) %>% 
-  tail(last_forty_years) %>% 
-  drop_na() %>% 
-  pivot_longer(!date) %>% 
-  mutate(label=shorten_name(name)) %>% 
-  ggplot(aes(x=date, y=value, color=label)) + 
-  geom_line()
+tsq[, c('LRNS', 'LRNE', 'LRH')] %>%
+  multiplot(screens=1:3, nc=1, col=1:3, xlab='', main='', cex.lab=0.7,
+            ylab=c("Real Sectors (% GDP)", "Enterprise", "Household"))
 ```
 
 <!-- # Economic Activity -->
@@ -136,73 +74,63 @@ data %>%
 ## PMI: Manufacturing
 
 ```{r}
-data %>% 
-  select(date, contains("PMI: Mfg")) %>% 
-  tail(last_two_years) %>% 
-  pivot_longer(!date) %>% 
-  mutate(label=shorten_name(name, level = 2)) %>% 
-  ggplot(aes(x=date, y=label, fill=value)) + geom_tile() + 
-  scale_x_date(date_breaks = "3 months", labels = label_date_short(), expand = c(0,0)) +
-  scale_fill_gradient2(low = "steelblue4", high = "red4", midpoint = 50) +
-  scale_y_discrete(position = "right", expand = c(0,0))
+tsm[,grep('^PMIM', colnames(tsm))] %>% window(start=2015) %>% 
+  multiplot(plot.type="m", nc=4, col=1:15, mar=c(1,4,1,1), cex.lab=0.7,
+            ylim=c(40,60), main='', xlab='', ylab=c(
+              "PMI", "Production", "New Order", "Export", "Backlog", 
+              "Final Inv", "Purchases", "Import", "Pch.Price", "Prod.Price", 
+              "Raw Inv.", "Employment", "Supp.Time", "Expectation"))
 ```
 
-## PMI: Non-manufacturing
+## PMI: Service
 
 ```{r}
-P1 <- data %>% 
-  select(date, contains("PMI: Service")) %>% 
-  tail(last_two_years) %>% 
-  pivot_longer(!date) %>% 
-  mutate(label=shorten_name(name, level = 2)) %>% 
-  ggplot(aes(x=date, y=label, fill=value)) + geom_tile() + 
-  scale_x_date(date_breaks = "3 months", labels = label_date_short(), expand = c(0,0)) +
-  scale_fill_gradient2(low = "steelblue4", high = "red4", midpoint = 50) +
-  scale_y_discrete(position = "right", expand = c(0,0)) +
-  theme(legend.position = "none")
-
-P2 <- data %>% 
-  select(date, contains("PMI: Construction")) %>% 
-  tail(last_two_years) %>% 
-  pivot_longer(!date) %>% 
-  mutate(label=shorten_name(name, level = 2)) %>% 
-  ggplot(aes(x=date, y=label, fill=value)) + geom_tile() + 
-  scale_x_date(date_breaks = "3 months", labels = label_date_short(), expand = c(0,0)) +
-  scale_fill_gradient2(low = "steelblue4", high = "red4", midpoint = 50) +
-  scale_y_discrete(position = "right", expand = c(0,0))
-
-P1 / P2
+tsm[,grep('^PMIS', colnames(tsm))] %>% window(start=2015) %>% 
+  multiplot(plot.type="m", nc=3, col=1:6, mar=c(1,4,1,1), cex.lab=0.7,
+            ylim=c(40,60), main='', xlab='', ylab=c(
+              "Business Activity", "New Order", "Input Price", "
+              Sales Price", "Employment", "Expectation"))
 ```
 
-## Electricity and Transportation
+## PMI: Construction
 
 ```{r}
-data %>% 
-  select(date, contains(c("Freight Traffic", "Electricity Production"))) %>% 
-  tail(last_five_years) %>% 
-  pivot_longer(!date) %>% 
-  mutate(label=shorten_name(name)) %>% 
-  ggplot(aes(date, value, col=name)) + geom_line() +
-  facet_wrap(~label, scales = "free_y") +
-  theme(legend.position = "none", aspect.ratio = .8) +
-  labs(caption = "Sum of trailing 12 months")
+tsm[,grep('^PMIC', colnames(tsm))] %>% window(start=2015) %>% 
+  multiplot(plot.type="m", nc=3, col=1:6, mar=c(1,4,1,1), cex.lab=0.7,
+            ylim=c(40,60), main='', xlab='', ylab=c(
+              "Business Activity", "New Order", "Input Price", "
+              Sales Price", "Employment", "Expectation"))
 ```
+
+## Electricity Production
+
+```{r}
+dualplot(y1 = tsm[,'EP'] %>% trans(naFill = "kalman", seasAdj = "x11"), 
+         y2 = tsm[,'EP'] %>% trans(naFill = "kalman", chg = "yoy"),
+         ylab = "Electricity Production (kWH Bn SA)", 
+         rylab = "YoY change (%)")
+```
+
+## Freight Traffic
+
+```{r}
+dualplot(y1 = tsm[,'TFT'] %>% trans(unit = 1/1000, seasAdj = "x11"), 
+         y2 = tsm[,'TFT'] %>% trans(chg="yoy"),
+         ylab = "Freight Traffic (Ton Bn SA)",
+         rylab = "YoY Change (%)")
+```
+
 
 ## Retail Sales
 
-```{r}
-data %>% 
-  select(date, `Retail Sales` = `CN: Retail Sales of Consumer Goods`, 
-         `Online Retail Sales (YoY)` = `CN: Online Retail Sales: ytd: Goods and Service`) %>% 
-  tail(last_five_years) %>% 
-  fill(`Online Retail Sales (YoY)`, .direction = "up") %>% 
-  mutate(`Retail Sales` = `Retail Sales` * 10^9) %>% 
-  pivot_longer(!date) %>% 
-  ggplot(aes(date, value, col=name)) + geom_line() +
-  facet_wrap(~name, scales = "free_y") +
-  scale_y_continuous(labels = label_number_si()) +
-  theme(legend.position = "none", aspect.ratio = .8) + 
-  labs(caption = "Sales volume seasonally adjusted")
+```{r, warning=FALSE}
+# some series with no missing values used as regressors
+# xreg = tsm[, c('TFT', 'ICIF', 'AFNI')]
+tsCG = tsm[,'RSCG'] %>% window(start=2015)
+dualplot(y1 = trans(tsCG, unit=1/1000, naFill = "kalman", seasAdj = "x11"), 
+         y2 = trans(tsCG, naFill = "kalman", chg='yoy'), 
+         ylab = "Consumer Good Retail (RMB Tn SA)", 
+         rylab = "YoY Change (%)")
 ```
 
 <!-- ## Online Sales and Volume -->
@@ -210,91 +138,80 @@ data %>%
 ## Industrial Production
 
 ```{r}
-data %>% 
-  select(date, contains("Industrial Production")) %>% 
-  tail(last_five_years) %>% 
-  pivot_longer(!date) %>% 
-  mutate(label = shorten_name(name)) %>% 
-  ggplot(aes(x=date,y=value, col=name)) + geom_line() + 
-  scale_y_continuous(labels = label_number_si()) +
-  facet_wrap(.~label, scales = "free_y") +
-  theme(legend.position = "none")
+# multiPlot = function(data, meta, keyword, trimLabel=0L, caption=NULL) {
+#   meta = filter(meta, str_detect(seriesName, keyword))
+#   data = data[, meta$nameLocal]
+#   names = substring(meta$seriesName, trimLabel)
+#   colnames(data) = names
+#   tidy(data) %>% 
+#     ggplot(aes(x=index, y=value, col=series)) + geom_line() + 
+#     scale_x_continuous(breaks = scales::pretty_breaks()) +
+#     facet_wrap(.~series, scales = "free_y") +
+#     labs(caption = caption)
+# }
+tsIP = tsm[, grep('^IP', colnames(tsm))] 
+labs = c('Cement', 'Steel', 'Robot', 'Automobile', 'Lithium Battery', 
+         'Refrigerator', 'Washing Mach.', 'Semiconductor', 'Television')
+tsIP %>% trans(unit = 1/1000, naFill = "locf", chg = "ttm") %>% 
+  multiplot(screens = 1:9, col = 1:9, nc=3, xlab=NULL, ylab=labs, 
+            main='',mar=c(1,4,1,1), cex.lab=0.7)
 ```
 
 <!-- # Money and Financing -->
 
-## Money Supply
+## Money Supply M1
 
 ```{r}
-data %>% 
-  select(date, contains("Money Supply")) %>% 
-  mutate_at(vars(ends_with(c("M1", "M2"))), ~.*10^9) %>% 
-  tail(last_three_years) %>% 
-  pivot_longer(!date) %>% 
-  mutate(label = substring(name, 4)) %>% 
-  ggplot(aes(date, value, col=name)) + geom_line() + 
-  scale_y_continuous(labels = label_number_si()) +
-  facet_wrap(~label, scales = "free_y") +
-  theme(legend.position = "none")
+tsGDP = trans(tsq[,'GDP']/4, freq = 'm', naFill = "locf", chg="ttm")
+dualplot(y1 = tsm[, 'MSM1'] / tsGDP * 100,
+         y2 = tsm[, 'MSM1YY'], 
+         ylab = "M1 to GDP (%)", 
+         rylab = "YoY Change (%)")
+```
+
+## Money Supply M2
+
+```{r}
+dualplot(y1 = tsm[, 'MSM2'] / tsGDP * 100,
+         y2 = tsm[, 'MSM2YYQM'], 
+         ylab = "M2 (RMB Tn SA)", 
+         rylab = "YoY Change (%)")
 ```
 
 ## Aggregate Financing
 
 ```{r}
-data %>% 
-  select(date, contains("Aggregate Financing")) %>% 
-  tail(last_five_years) %>% 
-  pivot_longer(!date) %>% 
-  mutate(label = shorten_name(name)) %>% 
-  mutate(value = value*10^9) %>% 
-  ggplot(aes(date, value, col=name)) + geom_line() +
-  facet_wrap(~label, scales = "free_y") +
-  scale_y_continuous(labels = label_number_si()) +
-  theme(legend.position = "none") +
-  labs(caption = "Sum of trailing 12 months")
+tsAF = tsm[, grep('^AFNI', colnames(tsm))]
+#   trans(unit=1/1000, naFill = "locf", chg = "ttm")
+labs = c("Total (RMB Tn TTM)", "Loan", "Entrusted", "Trust",  
+         "Bill", "Bond", "GovBond", "Equity", "Other")
+tsAF %>% trans(unit = 1/1000, naFill = "locf", chg = "ttm") %>% 
+  multiplot(screens = 1:9, col = 1:9, nc=3, xlab=NULL, ylab=labs, 
+            main='',mar=c(1,4,1,1), cex.lab=0.7)
 ```
 
 ## Bank Loans
 
 ```{r}
-data %>% 
-  select(date, contains("Loan: New Increased")) %>% 
-  tail(last_ten_years) %>% 
-  pivot_longer(!date) %>% 
-  mutate(group=if_else(str_detect(name, "Household"), "Households", "Corporates")) %>% 
-  mutate(label=shorten_name(name)) %>% 
-  mutate(value=value * 10^9) %>% 
-  ggplot(aes(date, value, col=label)) + geom_line() +
-  facet_wrap(~group, scales = "free_y") +
-  scale_y_continuous(labels = label_number_si()) +
-  labs(caption = "Sum of trailing 12 months") +
-  theme(aspect.ratio = .8)
-```
-
-<!-- ## Loan Prime Rate (LPR) -->
-
-```{r, include=FALSE}
-data %>% 
-  select(date, contains("Loan Prime Rate")) %>% 
-  tail(last_two_years) %>% 
-  pivot_longer(!date) %>% 
-  ggplot(aes(date, value, col=name)) +
-  geom_line()
+tsLN = tsm[, grep('^LNI', colnames(tsm))] %>% trans(unit=1/1000, chg="ttm")
+multiplot(tsLN, screens=c(1,1,2,2,2), nc=2, col=c(1,2,1,3,2), 
+          xlab='', main='', ylab=c("Household (RMB Tn TTM)", "Corporate"))
 ```
 
 ## Interest Rates
 
 ```{r}
-data %>% 
-  select(date, contains(c("SHIBOR", "R007", "Treasury Bond Yield"))) %>% 
-  tail(last_five_years) %>% 
-  pivot_longer(!date) %>% 
-  mutate(group = if_else(name %>% str_detect("Treasury"), "Treasury Yield", "Interbank Rate")) %>% 
-  mutate(label = shorten_name(name, level=1)) %>% 
-  ggplot(aes(date, value, col=label)) + 
-  facet_wrap(~group) + geom_line() +
-  scale_y_continuous(labels = label_number(accuracy = 0.1)) +
-  theme(aspect.ratio = .8)
+dualplot(tsm[, 'LPRLPR1Y'], tsm[,'IBCRRWAR0077D'], 
+         ylab = "1-Year Loan Prime Rate", 
+         rylab = "7-Day Interbank Repo Rate")
+```
+
+## Treasury Yields
+
+```{r}
+tsm[, grep('TBYISY', colnames(tsm))] %>% 
+  multiplot(screens=1, col=1:3, xlab='', ylab='Spot Yield (%)')
+legend('topleft', legend=c("1 Year", "5 Year", "10 Year"), col=1:3, lwd=2, bty="n")
 ```
 
 <!-- # Business -->
@@ -302,282 +219,164 @@ data %>%
 ## Industrial Enterprises
 
 ```{r}
-data %>% 
-  select(date, contains(c("Industrial Enterprise", "Industrial Capacity"))) %>% 
-  mutate_at(vars(contains(c("Revenue", "Profit"))), ~.*10^9) %>% 
-  mutate_at(vars(contains("Inventory")), ~.*100) %>% 
-  tail(last_five_years) %>% 
-  fill(!date, .direction = "up") %>% 
-  pivot_longer(!date) %>% 
-  mutate(label = shorten_name(name, level=2)) %>% 
-  ggplot(aes(date, value, col=name)) + geom_line() +
-  scale_y_continuous(labels = label_number_si()) +
-  facet_wrap(~label, scales = "free_y") +
-  theme(legend.position = "none") +
-  labs(caption = "Revenue and profit are sums of trailing 12 months.\nInventory is the seasonally adjusted level as a percentage of trailing 12-month revenue.")
+tsIND = tsm[,c('IESR', 'IETP')] %>% 
+  trans(unit=1/1000, disYTD=T, naFill="locf", chg="ttm")
+tsIND = cbind(tsIND, tsm[,'IEI']/tsIND[,'IESR']/1000)  
+tsIND = cbind(tsIND, trans(tsq[,'ICUR'], freq='m', naFill='locf'))
+colnames(tsIND) = c("Rev. (RMB Tn TTM)", "Profit", "Inv. / Rev.", 'Cap. Util.')
+multiplot(tsIND, screens=1:4, nc=2, col=1:4, xlab='', main='')
 ```
-
 
 <!-- ## Industrial value-added -->
 
-```{r, include=FALSE}
-data %>% 
-  select(date, contains("Value Added of Industry")) %>% 
-  fill(!date, .direction = "down") %>% 
-  pivot_longer(!date) %>% 
-  ggplot(aes(date, value, color=name)) + geom_line()
-```
-
-
 ## Investments
 
-```{r, warning=F}
-data %>% 
-  select(date, contains(c("Fixed Asset Investment", "Approved Project", "FAI", "FDI"))) %>% 
-  mutate_at(vars(contains("Approved Project")), ~.*10^9) %>% 
-  mutate_at(vars(contains(c("Fixed Asset Investment: ytd", "FAI", "FDI"))), ~.*10^6) %>% 
-  tail(last_five_years) %>% 
-  pivot_longer(!date) %>% 
-  mutate(label = shorten_name(name, level=2)) %>% 
-  ggplot(aes(date, value, col=name)) + geom_line() +
-  scale_y_continuous(labels = label_number_si()) +
-  facet_wrap(~label, scales = "free_y") +
-  theme(legend.position = "none") +
-  labs(caption = "Sum of trailing 12 months")
+```{r}
+tsFAI = tsm[,'FAI'] %>% 
+  trans(unit=1/10^6, disYTD=T, naFill="kalman", seasAdj="seats")
+dualplot(tsFAI, 12*tsm[,'FAIMMSA'], rylim=c(-30,30), 
+         ylab="FAI (RMB Tn SA)", rylab="Growth (Annualized MoM %)")
+```
+
+## Foreign Investment
+
+```{r}
+dualplot(y1 = trans(unit=1/1000, tsm[,'FDIU'], disYTD=T, seasAdj='x11'), 
+         y2 = trans(tsm[,'FDIU'], disYTD=T, chg="yoy"), 
+         ylab = "FDI (RMB Bn SA)", rylab = "YoY Change (%)")
 ```
 
 <!-- # Housing  -->
 
-## Real Estate Sales and Investmant
+## Real Estate Investment
 
 ```{r}
-data %>% 
-  select(date, contains(c("Real Estate Inv", "Building Sold"))) %>% 
-  tail(last_five_years) %>% 
-  pivot_longer(!date) %>% 
-  mutate(value = value * 10^6) %>% 
-  mutate(label = shorten_name(name, level=1)) %>% 
-  ggplot(aes(date, value, col=name)) + geom_line() +
-  scale_y_continuous(labels = label_number_si()) +
-  facet_wrap(~label, scales = "free_y") +
-  labs(caption = "Sum of trailing 12 months") +
-  theme(aspect.ratio = .8, legend.position = "none") 
+dualplot(y1 = trans(tsm[,'REI'], unit=1/10^6, disYTD=T, naFill="locf", chg="ttm"), 
+         y2 = trans(tsm[,'REI'], chg="yoy"),
+         ylab = "Real Estate Inv (RMB Tn TTM)", 
+         rylab = "YTD Change (%)")
 ```
 
-## Real Estate: Floor Space
+## Buildings Sold
+
+```{r}
+dualplot(y1 = trans(tsm[,'BS'], unit=1/10^6, disYTD=T, naFill="locf", chg="ttm"), 
+         y2 = trans(tsm[,'BS'], chg="yoy"),
+         ylab = "Buildings Sold (RMB Tn TTM)", 
+         rylab = "YTD Change (%)")
+```
+
+## Real Estate: Floor Spaces
 
 ```{r, warning=F}
-data %>% 
-  select(date, contains("Floor Space")) %>% 
-  tail(last_five_years) %>% 
-  pivot_longer(!date) %>% 
-  mutate(value=value*1000) %>% 
-  mutate(label=shorten_name(name, exclude="Commodity Bldg")) %>% 
-  ggplot(aes(date,value, col=name)) + geom_line() +
-  scale_y_continuous(labels = label_number_si()) +
-  facet_wrap(~label, scales = "free_y") + 
-  theme(legend.position = "none") +
-  labs(caption = "Sum of trailing 12 months")
+tsFSS = tsm[, c('FSS','FSSCBCB', 'FSCCBCB', 'FSCCBCB.')] %>% 
+  trans(unit=1/10^6, disYTD=T, naFill="locf", chg="ttm")
+colnames(tsFSS) = c("Sold (Sqm Bn TTM)", "Started", "Construction", "Completed")
+multiplot(tsFSS, screens=1:4, nc=2, col=1:4, xlab='', main='',cex.lab=0.8)
 ```
 
 ## Government Revenue and Expenditure
 
 ```{r}
-data %>% 
-  select(date, contains(c("Govt Revenue", "Govt Expenditure", "Government Revenue"))) %>% 
-  tail(last_five_years) %>% 
-  pivot_longer(!date) %>% 
-  mutate(group = if_else(name %>% str_detect("Tax|Fund"), 
-                         "Sources of Revenue", 
-                         "Revenue and Expenditure")) %>%
-  mutate(label=shorten_name(name, level=1)) %>% 
-  mutate(value = value * 10^9) %>% 
-  ggplot(aes(date, value, color=label)) + geom_line() +
-  facet_wrap(~group, scales = "free_y") + 
-  scale_y_continuous(labels = label_number_si()) +
-  theme(aspect.ratio = .8) +
-  labs(caption = "Sum of trailing 12 months")
+tsm[,c('GR', 'GE')] %>% 
+  trans(unit=1/1000, disYTD=T, naFill="locf", chg="ttm") %>% 
+  multiplot(plot.type='s', col=1:2, xlab='', main='', 
+            ylab=c('Govt Rev. vs Exp. (RMB Tn TTM)'))
 ```
 
-## Government Debt Issuance
+## Local Government Debt
 
 ```{r}
-data %>% 
-  select(date, contains("Local Government Debt Issuance:")) %>% 
-  tail(last_three_years) %>% 
-  pivot_longer(!date) %>% 
-  mutate(value = value * 10^6) %>% 
-  mutate(label = shorten_name(name, 2)) %>% 
-  ggplot(aes(date, value, col=name)) + geom_line() +
-  facet_wrap(~label) +
-  scale_y_continuous(labels = label_number_si()) +
-  theme(legend.position = "none") +
-  labs(caption = "Sum of trailing 12 months")
+tsm[, grep('LGDI', colnames(tsm))] %>% 
+  window(start=2018) %>% 
+  trans(unit=1/10^6, chg="ttm") %>% 
+  multiplot(plot.type="m", nc=2, col=1:4, xlab='', main='', cex.lab=0.8,
+    ylab=c("General (RMB Tn TTM)", "Special", "New Issued", "Refinance"))
 ```
 
 ## Trade Balance
 
 ```{r}
-data %>% 
-  select(date, contains(c("Import CIF", "Export FOB", "Trade balance"))) %>% 
-  tail(last_ten_years) %>% 
-  mutate_at(vars(!date), ~.*10^6) %>% 
-  ggplot(aes(x=date)) + 
-  geom_line(aes(y=`CN: Export FOB`, col="Export FOB")) + 
-  geom_line(aes(y=`CN: Import CIF`, col="Import CIF")) +
-  geom_col(aes(y=`CN: Trade Balance`), fill="grey") +
-  scale_y_continuous(labels = label_number_si()) +
-  labs(caption = "Seasonally adjusted USD")
+tsm[, c('ICIF', 'EFOB', 'TB')] %>% 
+  trans(unit=1/1000, seasAdj = "x11") %>% 
+  multiplot(screens=c(1,1,2), nc=2, col=1:3, xlab='', main='',
+            ylab=c("Import vs Export (USD Bn SA)", "Trade Balance"))
 ```
+
+## Exchange Rate
+
+```{r}
+dualplot(y1 = tsm[,'TB'] %>% trans(unit=1/1000, seasAdj="x11"), 
+         y2 = 1/tsm[,'FXRPBOCMERMBUSD'], 
+         ylab = "Trade Balance (USD Bn SA)", 
+         rylab = "CNY / USD")
+```
+
 
 ## Balance of Payments
 
 ```{r}
-data %>% 
-  select(date, contains("BoP")) %>% 
-  tail(last_ten_years) %>% 
-  drop_na() %>% 
-  pivot_longer(!date) %>% 
-  mutate(value=value*10^6) %>% 
-  mutate(label=shorten_name(name, 2, exclude="BoP")) %>% 
-  ggplot(aes(date, value, fill=label)) + 
-  geom_col(position = position_stack()) +
-  scale_y_continuous(label = label_number_si())
+tidy(tsq[, grep('^BP', colnames(tsq))]) %>% 
+  mutate(series = factor(
+    series, 
+    levels = c("BPFARA","BPCACA","BPFAN","BPNEO"), 
+    labels = c("Reserve","C.A.","F.A.","Errors"))
+  ) %>% 
+  replace_na(list(value=0)) %>% 
+  ggplot(aes(index, value/1000, fill=series)) +
+  geom_col(position = "stack") +
+  scale_fill_manual(values=2:5) +
+  scale_x_continuous(breaks = scales::pretty_breaks()) +
+  labs(x = NULL, y = "BoP (Quarterly USD Bn)", fill=NULL, 
+       caption= str_glue(
+       "Net Export: CR+; FDI Inflow: CR+; Forex Receipt: DR-;Reserve Accu.: DR-. Disguised capital outflow:\ 
+       1. Export wihtout cash receipt (Errors--); 2. Hide export or exaggerate import (shrinked C.A.)\
+       3. Hided oversea investment (F.A.++Errors--). 4. Underground forex exchange (no record)"))+
+  theme_classic() 
 ```
 
 ## RMB Assets Hold by Foreign Entities
 
 ```{r}
-data %>% 
-  select(date, contains("RMB Financial Asset Held by Overseas Entity")) %>% 
-  tail(last_ten_years) %>% 
-  drop_na() %>% 
-  pivot_longer(!date) %>% 
-  mutate(value = value*10^9) %>% 
-  mutate(label = shorten_name(name)) %>% 
-  ggplot(aes(date,value,col=name)) + 
-  scale_y_continuous(labels = label_number_si()) +
-  geom_line() +
-  facet_wrap(~label) +
-  theme(legend.position = "none")
+tsm[, grep('DRMBFAHOE', colnames(tsm))] %>% window(start=2014) %>% 
+  multiplot(screens=1:4, nc=2, col=1:4, main='',xlab='',
+            ylab = c("Equity (RMB Bn)", "Bond", "Loan", "Deposit"))
 ```
 
 ## Equity Market
 
 ```{r}
-data %>% 
-  select(date, contains("CSI 300 Index")) %>% 
-  tail(last_two_years) %>% 
-  pivot_longer(!date) %>% 
-  mutate(label=shorten_name(name)) %>% 
-  ggplot(aes(date, value,col=label)) + geom_line() +
-  facet_wrap(~label, scales = "free_y") +
-  scale_x_date(labels = label_date("%m/%y")) +
-  theme(legend.position = "none")
+tsm[, grep('ICSI300', colnames(tsm))] %>% window(start=2020) %>% 
+multiplot(plot.type="m", nc=4, col=1:12, mar=c(1,4,1,1), main='', xlab='', 
+          ylab=c("CSI 300", "Energy", "Material", "Industrial", "Cons. Disc.", 
+                 "Cons. Stap.", "Health Care", "Financial", "InfoTech", 
+                 "Telecom", "Utilities"), cex.lab=0.7)
 ```
 
 ## Commodity Market
 
 ```{r}
-data %>% 
-  select(date, contains(c("Settlement Price", "CCI"))) %>% 
-  tail(last_two_years) %>% 
-  pivot_longer(!date) %>% 
-  mutate(label=shorten_name(name, exclude="1st Month")) %>% 
-  ggplot(aes(date, value, col=label)) + geom_line() +
-  scale_x_date(labels = label_date("%m/%y")) +
-  facet_wrap(~label, scales = "free_y") + 
-  theme(legend.position = "none")
+tsm[, grep('^SP', colnames(tsm))] %>% window(start=2020) %>% 
+multiplot(plot.type="m", nc=3, col=1:7, mar=c(1,4,1,1), main='', xlab='',
+          ylab=c("Copper", "Steel Rebar", "Iron Ore", "Coke", "Rubber", "Soybean", "Cotton"))
 ```
 
-## Bond Market 
+## Bond Market
 
 ```{r}
-P1<-data %>% 
-  select(date, contains("Bond Issuance: PBC:")) %>% 
-  tail(last_five_years) %>% 
-  pivot_longer(!date) %>% 
-  mutate(value=value * 10^6) %>% 
-  mutate(label=shorten_name(name)) %>% 
-  ggplot(aes(date,value,fill=label)) + 
-  geom_area(position = position_stack()) +
-  scale_y_continuous(labels = label_number_si()) +
-  labs(caption = "Sum of trailing 12 months") +
-  theme(aspect.ratio = .8, legend.position = "none") +
-  ggtitle("Bond issuance")
-
-P2<-data %>% 
-  select(date, contains("Bond Outstanding: PBC:")) %>% 
-  tail(last_five_years) %>% 
-  pivot_longer(!date) %>% 
-  mutate(value=value * 10^6) %>% 
-  mutate(label=shorten_name(name)) %>% 
-  ggplot(aes(date,value,fill=label)) + 
-  geom_area(position = position_stack()) +
-  scale_y_continuous(labels = label_number_si()) +
-  ggtitle("Bond outstanding")
-
-P1 + P2
+tsm[, grep("BOPBC", colnames(tsm))] %>% 
+  window(start=2015) %>% trans(unit=1/10^6) %>% 
+  multiplot(plot.type="s", col=1:3, main='', xlab='', ylab="Bond Outstanding (RMB Tn)")
+legend('topleft', legend=c("Gov", "Fin", "Corp"), col=1:3, lwd=2)
 ```
 
-## Labor Employment
+## Bond Market
 
 ```{r}
-P1<-data %>% 
-  select(date, `CN: Employment: Rural`, `CN: Employment: Urban`) %>% 
-  drop_na() %>% 
-  pivot_longer(!date) %>% 
-  mutate(value = value*10^6) %>% 
-  mutate(label = shorten_name(name)) %>% 
-  ggplot(aes(date, value, fill=label)) +
-  geom_area(position = position_stack()) +
-  scale_y_continuous(labels = label_number_si()) +
-  theme(aspect.ratio = .8)
-
-P2<-data %>% 
-  select(date, 
-         `CN: Employment: Primary Industry`, 
-         `CN: Employment: Secondary Industry`, 
-         `CN: Employment: Tertiary Industry`) %>% 
-  drop_na() %>% 
-  pivot_longer(!date) %>% 
-  mutate(value = value*10^6) %>% 
-  mutate(label = shorten_name(name)) %>% 
-  ggplot(aes(date, value, fill=label)) +
-  geom_area(position = position_stack()) +
-  scale_y_continuous(labels = label_number_si())
-
-P1 + P2
-```
-
-## Employment: Urban Non-Private
-
-```{r}
-data %>% 
-  select(date, contains("Employee: Urban Non-private:")) %>% 
-  drop_na() %>% 
-  pivot_longer(!date) %>% 
-  mutate(value = value * 10^6) %>% 
-  mutate(label = shorten_name(name) %>% str_trunc(28)) %>% 
-  ggplot(aes(date,value,fill=label)) +
-  geom_area(position = position_stack()) +
-  scale_y_continuous(labels = label_number_si()) +
-  theme(legend.position = "right")
-```
-
-## Employment: Private & Individual
-
-```{r}
-data %>% 
-  select(date, contains("Employee: Private & Individual:")) %>% 
-  filter(!is.na(`CN: No of Employee: Private & Individual: Wholesale & Retail Trade`)) %>% 
-  pivot_longer(!date) %>% 
-  mutate(value = value * 10^6) %>% 
-  mutate(label = shorten_name(name)) %>% 
-  ggplot(aes(date,value,fill=label)) +
-  geom_area(position = position_stack()) +
-  scale_y_continuous(labels = label_number_si()) +
-  theme(legend.position = "right")
+tsm[, grep("BIPBC", colnames(tsm))] %>% 
+  window(start=2015) %>% trans(unit=1/10^6) %>% 
+  multiplot(plot.type="s", col=1:3, main='', xlab='', ylab="Bond Issuance (RMB Tn)")
+legend('topleft', legend=c("Gov", "Fin", "Corp"), col=1:3, lwd=2)
 ```
 
 <!-- THE END -->

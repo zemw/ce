@@ -2,6 +2,6 @@
 
 This presentation provides a snapshot of the recent development of the Chinese economy. 
 
-Latest presentation: [download](https://github.com/zemw/ce/blob/main/charts.pdf)
+Latest chart pack: [download](https://github.com/zemw/ce/raw/main/charts.pdf)
 
 Data source: CEIC

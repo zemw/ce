@@ -1,382 +1,448 @@
 ---
-title: "Chinese Economy Charts"
-date: "August 2022"
-output: ioslides_presentation
+title: "Chinese Economy Chart Pack"
+date: "December 2022"
+output:
+  beamer_presentation: default
+  ioslides_presentation: default
 ---
 
-<!-- TODO: Blank page after Title page -->
+<!-- General Principles: -->
+<!-- * Faithful to official data; use interpolation as less as possible -->
+<!-- * Timely changes are most valuable; avoid using YTD or TTM, as they  -->
+<!--   dilute most recent changes -->
+<!-- * Time series are transformed to present in the most sensible way -->
+<!-- * Everything must be seasonally adjusted; X11 method is preferred -->
+<!-- * Titles need to be concise and informational; avoid abbreviations -->
+<!-- * Column names should be readable, avoid modify column names in code -->
+<!-- * Base plot style is preferred, even with ggplot -->
+<!-- * Avoid cutting short of time horizon, unless data is unavailable in -->
+<!--   early dates or the chart is overloaded with information -->
 
-```{r, include=FALSE}
-library(tidyverse)
-library(lubridate)
-library(patchwork)
-library(forecast)
+```{r, include=F}
+library(ggplot2)
 library(csutil)
-library(broom)
 library(zoo)
+```
 
-# load data
+```{r data-loading, include=F}
 df = parse2DF("data.m")
-df$nameLocal = abbr(df$seriesName, "cd")
-dfq = filter(df, frequency == "Quarterly")
-dfm = filter(df, frequency == "Monthly")
-tsq = grabTS(dfq, out = "ts") %>% window(start=2010)
-tsm = grabTS(dfm, out = "ts") %>% window(start=2010)
-colnames(tsq) = dfq$nameLocal
-colnames(tsm) = dfm$nameLocal
+dfn = read.csv("names.csv")
+df = merge(df, dfn, by = c("srCode", "seriesName"))
+dfq = subset(df, frequency == "Quarterly")
+dfm = subset(df, frequency == "Monthly")
+DTQ = grabTS(dfq, out = "zoo") |> window(start=2012)
+DTM = grabTS(dfm, out = "zoo") |> window(start=2012)
+colnames(DTQ) = dfq$shortName
+colnames(DTM) = dfm$shortName
+```
 
+```{r global-settings, include=F}
+ggplot2::theme_set(
+  ggthemes::theme_few() + 
+  theme(legend.position = "none", 
+        legend.title = element_blank(),
+        axis.title.x = element_blank()))
 knitr::opts_chunk$set(echo = F, warning = F, message = F)
 ```
 
-<!-- # Overview -->
+## DISCLAIMER {.center}
+
+This chart pack presents a set of key indicators to track China's economic 
+conditions and is intended to supplement the official reports from the NBS. 
+The time series in this chart pack have been seasonally adjusted and missing 
+values interpolated by ourselves, therefore may or may not match the official 
+numbers and should be used with caution. The author does not express any 
+opinions through this presentation and the user assumes all responsibility 
+for relying on the information provided.
+
 
 ## Gross Demestic Product
 
 ```{r}
-gdpGap = trans(log(tsq[,'GDP']), seasAdj="seats", hpFilter="cycle")
-dualplot(y1 = 100*gdpGap, y2 = 4*(tsq[,'GDPIQQSA']-100), 
-         lylim = c(-3,3), rylim = c(-20,20),
-         ylab = "GDP Gap (HP-Filtered %)", ylab.at = 0,
-         rylab = "Annualized Quarterly Growth %")
+dualplot(
+  y1 = DTQ$GDP |> trans(seas="x11", hp_filter="cycle"), 
+  y2 = (DTQ$`GDP: QoQ` - 100) * 4, 
+         lylim = c(-1000, 1000), rylim = c(-20,20),
+         ylab = "GDP Gap (HP-Filtered)", ylab.at = 0,
+         rylab = "Quarterly Growth %")
 abline(h=0, col="gray")
 ```
 
 ## Inflation
 
 ```{r}
-dualplot(tsm[,'CPI']-100, tsm[,'PPIPPI']-100, ylab = "CPI (YoY)", rylab = "PPI (YoY)")
+dualplot(y1 = DTM$CPI -100, y2 = DTM$PPI - 100, 
+         ylab = "CPI (YoY)", rylab = "PPI (YoY)")
 ```
 
 ## Unemployment
 
 ```{r}
-newEmp = tsm[,'EUNI'] %>% 
-  window(start = 2013) %>% 
-  trans(unit = 1/1000, disYTD = T, naFill = "kalman", chg="ttm")
-unemp = tsm[,'SURU31MC'] %>% 
-  window(start=2014) %>% 
-  trans(naFill = "kalman")
-dualplot(newEmp, unemp, 
-         ylab = "New Urban Employment (Million TTM)", 
-         rylab = "Unemployment Rate (31 Major Cities)")
+# surveyed unemployment rates are available from 2013
+with(window(DTM, start=2014), {
+  dualplot(
+    y1 = `New Urban Employment: ytd` |> trans(unit=1/1000, YTD="avg", seas="x11"), 
+    y2 = `Unemployment: 31 Cities` |> na.approx(), 
+    ylab  = "New Urban Employment (Million)", 
+    rylab = "Unemployment Rate (31 Cities)")  
+})
+```
+
+## Consumption: Retail Sales
+
+```{r, warning=FALSE}
+# the level data has very low quality with lots of missing values
+# use the seasonally-adjusted mom growth rates to construct an index
+dualplot(
+  y1 = as.ts(DTM$`RetailSales: mom`/100) |> diffinv(xi=1), 
+  y2 = as.ts(DTM$`RetailSales: mom`*12),
+  rylim = c(-30,30),
+  ylab = "Retail Sales Index", 
+  rylab = "MoM Growth (annualized %)")
+```
+
+
+## Fixed Asset Investment
+
+```{r}
+# the level data has very low quality with lots of missing values
+# use the seasonally-adjusted mom growth rates to construct an index
+dualplot(
+  y1 = as.ts(DTM$`FAI: mom`/100) |> diffinv(xi=1),
+  y2 = as.ts(DTM$`FAI: mom`*12), 
+  rylim = c(-30,30),
+  ylab = "FAI Index", 
+  rylab = "MoM Growth (annualized %)")
+```
+
+## Foreign Direct Investment
+
+```{r}
+# No missing values in Jan-Feb
+# FDI is less prone to LNY holiday; standard x11 applies
+dualplot(
+  y1 = DTM$`FDI: ytd` |> trans(unit=1/1000, YTD = "d", seas = "x11"), 
+  y2 = DTM$`FDI: ytd` |> trans(YTD = "d", chg="yoy"), 
+  ylab = "FDI (USD Bn)", rylab = "YoY Growth (%)") 
 ```
 
 ## National Debt / GDP
 
 ```{r}
-tsq[, c('LRNS', 'LRNE', 'LRH')] %>%
-  multiplot(screens=1:3, nc=1, col=1:3, xlab='', main='', cex.lab=0.7,
-            ylab=c("Real Sectors (% GDP)", "Enterprise", "Household"))
+subset(DTQ, select=startsWith(colnames(DTQ), "Leverage")) |> 
+  broom::tidy() |> 
+  tidyr::separate(series, c(NA, "name"), sep=": ") |> 
+  ggplot(aes(x = index)) +
+  geom_line(aes(y = value, col = name)) +
+  facet_wrap(~ name, scales = "free_y") +
+  scale_color_manual(values = 2:5) +
+  scale_x_continuous(breaks = pretty) +
+  labs(x = NULL, y = "Debt / GDP")
 ```
-
-<!-- # Economic Activity -->
 
 ## PMI: Manufacturing
 
 ```{r}
-tsm[,grep('^PMIM', colnames(tsm))] %>% window(start=2015) %>% 
-  multiplot(plot.type="m", nc=4, col=1:15, mar=c(1,4,1,1), cex.lab=0.7,
-            ylim=c(40,60), main='', xlab='', ylab=c(
-              "PMI", "Production", "New Order", "Export", "Backlog", 
-              "Final Inv", "Purchases", "Import", "Pch.Price", "Prod.Price", 
-              "Raw Inv.", "Employment", "Supp.Time", "Expectation"))
+window(DTM, start=2016) |> 
+  subset(select=startsWith(colnames(DTM), "PMIM")) |> 
+  scale() |> 
+  broom::tidy() |> 
+  tidyr::separate(series, c(NA, "name"), sep=": ") |> 
+  ggplot(aes(x = index)) +
+  geom_line(aes(y = value, col = name)) +
+  geom_abline(slope = 0, intercept = 0, col = "gray") +
+  facet_wrap(~ name, scales = "fixed") +
+  scale_x_continuous(breaks = pretty) +
+  labs(y = NULL, caption = "Normalized by mean and s.d.") +
+  coord_cartesian(ylim = c(-2.5, 2.5))
 ```
 
 ## PMI: Service
 
 ```{r}
-tsm[,grep('^PMIS', colnames(tsm))] %>% window(start=2015) %>% 
-  multiplot(plot.type="m", nc=3, col=1:6, mar=c(1,4,1,1), cex.lab=0.7,
-            ylim=c(40,60), main='', xlab='', ylab=c(
-              "Business Activity", "New Order", "Input Price", "
-              Sales Price", "Employment", "Expectation"))
+window(DTM, start=2016) |> 
+  subset(select=startsWith(colnames(DTM), "PMIS")) |> 
+  scale() |> 
+  broom::tidy() |> 
+  tidyr::separate(series, c(NA, "name"), sep=": ") |> 
+  ggplot(aes(x = index)) +
+  geom_line(aes(y = value, col = name)) +
+  geom_abline(slope = 0, intercept = 0, col = "gray") +
+  facet_wrap(~ name, scales = "fixed") +
+  scale_x_continuous(breaks = pretty) +
+  labs(y = NULL, caption = "Normalized by mean and s.d.")
 ```
 
 ## PMI: Construction
 
 ```{r}
-tsm[,grep('^PMIC', colnames(tsm))] %>% window(start=2015) %>% 
-  multiplot(plot.type="m", nc=3, col=1:6, mar=c(1,4,1,1), cex.lab=0.7,
-            ylim=c(40,60), main='', xlab='', ylab=c(
-              "Business Activity", "New Order", "Input Price", "
-              Sales Price", "Employment", "Expectation"))
+window(DTM, start=2016) |> 
+  subset(select=startsWith(colnames(DTM), "PMIC")) |> 
+  scale() |> 
+  broom::tidy() |> 
+  tidyr::separate(series, c(NA, "name"), sep=": ") |> 
+  ggplot(aes(x = index)) +
+  geom_line(aes(y = value, col = name)) +
+  geom_abline(slope = 0, intercept = 0, col = "gray") +
+  facet_wrap(~ name, scales = "fixed") +
+  scale_x_continuous(breaks = pretty) +
+  labs(y = NULL, caption = "Normalized by mean and s.d.") +
+  coord_cartesian(ylim = c(-2.5, 2.5))
 ```
 
-## Electricity Production
+## Keqiang Index: Electricity Production
 
 ```{r}
-dualplot(y1 = tsm[,'EP'] %>% trans(naFill = "kalman", seasAdj = "x11"), 
-         y2 = tsm[,'EP'] %>% trans(naFill = "kalman", chg = "yoy"),
-         ylab = "Electricity Production (kWH Bn SA)", 
-         rylab = "YoY change (%)")
+# yoy series has missing values in January
+# imputation assumes it has the same value as February
+dualplot(
+  y1 = DTM$`Electricity Production: ytd` |> trans(YTD="avg", seas="x11"),
+  y2 = DTM$`Electricity Production: yoy: ytd` |> na.locf(fromLast=T), 
+  ylab = "Electricity Production (kWH Mn)", 
+  rylab = "YoY YTD change (%)")
 ```
 
-## Freight Traffic
+## Keqiang Index: Traffic
 
 ```{r}
-dualplot(y1 = tsm[,'TFT'] %>% trans(unit = 1/1000, seasAdj = "x11"), 
-         y2 = tsm[,'TFT'] %>% trans(chg="yoy"),
-         ylab = "Freight Traffic (Ton Bn SA)",
-         rylab = "YoY Change (%)")
+# there are no missing values in Jan/Feb in these series
+# seasonally-adjusted result for Freight Traffic is not smooth
+# significant structure break happens in Passenger Traffic in 2014
+subset(DTM, select=c(`Freight Traffic`, `Passenger Traffic`, `Air Passengers`)) |> 
+  trans(seas = "x11a") |> 
+  window(start = 2016) |>
+  broom::tidy() |> 
+  ggplot(aes(x = index, y = value, col = series)) +
+  geom_line() + labs(x=NULL, y=NULL) +
+  facet_wrap(~series, scales = "free_y") +
+  scale_x_continuous(breaks = pretty) +
+  theme(aspect.ratio = 1)
 ```
 
 
-## Retail Sales
+## Real Estate: Construction and Sales
 
-```{r, warning=FALSE}
-# some series with no missing values used as regressors
-# xreg = tsm[, c('TFT', 'ICIF', 'AFNI')]
-tsCG = tsm[,'RSCG'] %>% window(start=2015)
-dualplot(y1 = trans(tsCG, unit=1/1000, naFill = "kalman", seasAdj = "x11"), 
-         y2 = trans(tsCG, naFill = "kalman", chg='yoy'), 
-         ylab = "Consumer Good Retail (RMB Tn SA)", 
-         rylab = "YoY Change (%)")
+```{r, warning=F}
+# duplicated values in Jan/Feb
+subset(DTM, select=startsWith(colnames(DTM), "Bld")) |> 
+  trans(unit=1/1000, YTD = "avg", seas = "x11") |>
+  broom::tidy() |> 
+  tidyr::separate(series, c(NA, "name", NA), sep=": ") |> 
+  ggplot(aes(x = index, y = value, col = name)) +
+  geom_line() + labs(x = NULL, y = "Floor Spaces (Sqm mn)") +
+  facet_wrap(~name, scales = "free_y") +
+  scale_x_continuous(breaks = pretty)
 ```
 
-<!-- ## Online Sales and Volume -->
+## Industrial Enterprises
+
+```{r}
+# Jan-Feb values are duplicates
+dualplot(
+  y1 = DTM$`Industrial: Revenue: ytd` |> trans(YTD="avg", seas="x11"),
+  y2 = DTM$`Industrial: Profit: ytd` |> trans(YTD="avg", seas="x11"),
+  ylab = "Industrial Revenue (RMB Bn)", 
+  rylab = "Industrial Profit (RMB Bn)")
+```
 
 ## Industrial Production
 
 ```{r}
-# multiPlot = function(data, meta, keyword, trimLabel=0L, caption=NULL) {
-#   meta = filter(meta, str_detect(seriesName, keyword))
-#   data = data[, meta$nameLocal]
-#   names = substring(meta$seriesName, trimLabel)
-#   colnames(data) = names
-#   tidy(data) %>% 
-#     ggplot(aes(x=index, y=value, col=series)) + geom_line() + 
-#     scale_x_continuous(breaks = scales::pretty_breaks()) +
-#     facet_wrap(.~series, scales = "free_y") +
-#     labs(caption = caption)
-# }
-tsIP = tsm[, grep('^IP', colnames(tsm))] 
-labs = c('Cement', 'Steel', 'Robot', 'Automobile', 'Lithium Battery', 
-         'Refrigerator', 'Washing Mach.', 'Semiconductor', 'Television')
-tsIP %>% trans(unit = 1/1000, naFill = "locf", chg = "ttm") %>% 
-  multiplot(screens = 1:9, col = 1:9, nc=3, xlab=NULL, ylab=labs, 
-            main='',mar=c(1,4,1,1), cex.lab=0.7)
+# missing values in both Jan and Feb; interpolation applies
+subset(DTM, select=startsWith(colnames(DTM), "IP")) |> 
+  trans(na_impute = "interp", seas = "x11") |> 
+  window(start=2016) |>
+  broom::tidy() |> 
+  tidyr::separate(series, c(NA, 'name'), sep=": ") |> 
+  ggplot(aes(x = index)) +
+  geom_line(aes(y = value, col = name)) +
+  facet_wrap(~name, scales = "free_y") +
+  scale_x_continuous(breaks = pretty) +
+  scale_y_continuous(labels = scales::label_number_si()) +
+  labs(y = NULL, caption = "Missing values in Jan/Feb interpolated")
 ```
-
-<!-- # Money and Financing -->
 
 ## Money Supply M1
 
 ```{r}
-tsGDP = trans(tsq[,'GDP']/4, freq = 'm', naFill = "locf", chg="ttm")
-dualplot(y1 = tsm[, 'MSM1'] / tsGDP * 100,
-         y2 = tsm[, 'MSM1YY'], 
-         ylab = "M1 to GDP (%)", 
-         rylab = "YoY Change (%)")
+# official seasonally adjusted money aggregates are available
+# but they are not up-to-date
+dualplot(
+  y1 = DTM$M1 |> trans(seas="x11a") |> diff(),
+  y2 = DTM$`M1: yoy`, 
+  ylab = "MoM Change (RMB Bn)", 
+  rylab = "YoY Growth (%)")
+abline(h=0, col="gray")
 ```
 
 ## Money Supply M2
 
 ```{r}
-dualplot(y1 = tsm[, 'MSM2'] / tsGDP * 100,
-         y2 = tsm[, 'MSM2YYQM'], 
-         ylab = "M2 (RMB Tn SA)", 
-         rylab = "YoY Change (%)")
+dualplot(
+  y1 = DTM$M2 |> trans(seas="x11a") |> diff(),
+  y2 = DTM$`M2: yoy`, 
+  ylab = "MoM Change (RMB Bn)", 
+  rylab = "YoY Growth (%)")
+abline(h=0, col="gray")
 ```
 
-## Aggregate Financing
+## Aggregate Financing: New Increased
 
 ```{r}
-tsAF = tsm[, grep('^AFNI', colnames(tsm))]
-#   trans(unit=1/1000, naFill = "locf", chg = "ttm")
-labs = c("Total (RMB Tn TTM)", "Loan", "Entrusted", "Trust",  
-         "Bill", "Bond", "GovBond", "Equity", "Other")
-tsAF %>% trans(unit = 1/1000, naFill = "locf", chg = "ttm") %>% 
-  multiplot(screens = 1:9, col = 1:9, nc=3, xlab=NULL, ylab=labs, 
-            main='',mar=c(1,4,1,1), cex.lab=0.7)
+subset(DTM, select=startsWith(colnames(DTM), "AFNI")) |> 
+  trans(seas = "x11a") |>
+  window(start = 2016) |>
+  broom::tidy() |> 
+  tidyr::separate(series, c(NA, 'name'), sep=": ") |> 
+  ggplot(aes(x = index)) +
+  geom_line(aes(y = value, col = name)) +
+  facet_wrap(~ name, scales = "free_y") +
+  scale_x_continuous(breaks = pretty) +
+  scale_y_continuous(labels = scales::label_number()) +
+  labs(x= NULL, y = NULL)
 ```
 
-## Bank Loans
+## Bank Loans: New Increased
 
 ```{r}
-tsLN = tsm[, grep('^LNI', colnames(tsm))] %>% trans(unit=1/1000, chg="ttm")
-multiplot(tsLN, screens=c(1,1,2,2,2), nc=2, col=c(1,2,1,3,2), 
-          xlab='', main='', ylab=c("Household (RMB Tn TTM)", "Corporate"))
+subset(DTM, select=startsWith(colnames(DTM), "Loan")) |> 
+  trans(seas = "x11a") |>
+  window(start = 2016) |>
+  broom::tidy() |> 
+  tidyr::separate(series, c("name", "type", "term"), sep = ": ") |> 
+  ggplot(aes(x = index, y = value, col = term)) +
+  geom_line() + 
+  facet_wrap(~ type, scales = "free_y") +
+  scale_x_continuous(breaks = pretty) +
+  theme(legend.position = "bottom") + 
+  labs(x = NULL, y = NULL)
 ```
+
 
 ## Interest Rates
 
 ```{r}
-dualplot(tsm[, 'LPRLPR1Y'], tsm[,'IBCRRWAR0077D'], 
-         ylab = "1-Year Loan Prime Rate", 
-         rylab = "7-Day Interbank Repo Rate")
+# LPR starts available in 2019
+with(window(DTM, start=2016), {
+  dualplot(
+    y1 = `LPR: 1Y`, 
+    y2 = DR007,
+    ylab = "1-Year Loan Prime Rate", 
+    rylab = "7-Day Interbank Repo Rate")
+})
 ```
 
 ## Treasury Yields
 
 ```{r}
-tsm[, grep('TBYISY', colnames(tsm))] %>% 
-  multiplot(screens=1, col=1:3, xlab='', ylab='Spot Yield (%)')
-legend('topleft', legend=c("1 Year", "5 Year", "10 Year"), col=1:3, lwd=2, bty="n")
-```
-
-<!-- # Business -->
-
-## Industrial Enterprises
-
-```{r}
-tsIND = tsm[,c('IESR', 'IETP')] %>% 
-  trans(unit=1/1000, disYTD=T, naFill="locf", chg="ttm")
-tsIND = cbind(tsIND, tsm[,'IEI']/tsIND[,'IESR']/1000)  
-tsIND = cbind(tsIND, trans(tsq[,'ICUR'], freq='m', naFill='locf'))
-colnames(tsIND) = c("Rev. (RMB Tn TTM)", "Profit", "Inv. / Rev.", 'Cap. Util.')
-multiplot(tsIND, screens=1:4, nc=2, col=1:4, xlab='', main='')
-```
-
-<!-- ## Industrial value-added -->
-
-## Investments
-
-```{r}
-tsFAI = tsm[,'FAI'] %>% 
-  trans(unit=1/10^6, disYTD=T, naFill="kalman", seasAdj="seats")
-dualplot(tsFAI, 12*tsm[,'FAIMMSA'], rylim=c(-30,30), 
-         ylab="FAI (RMB Tn SA)", rylab="Growth (Annualized MoM %)")
-```
-
-## Foreign Investment
-
-```{r}
-dualplot(y1 = trans(unit=1/1000, tsm[,'FDIU'], disYTD=T, seasAdj='x11'), 
-         y2 = trans(tsm[,'FDIU'], disYTD=T, chg="yoy"), 
-         ylab = "FDI (RMB Bn SA)", rylab = "YoY Change (%)")
-```
-
-<!-- # Housing  -->
-
-## Real Estate Investment
-
-```{r}
-dualplot(y1 = trans(tsm[,'REI'], unit=1/10^6, disYTD=T, naFill="locf", chg="ttm"), 
-         y2 = trans(tsm[,'REI'], chg="yoy"),
-         ylab = "Real Estate Inv (RMB Tn TTM)", 
-         rylab = "YTD Change (%)")
-```
-
-## Buildings Sold
-
-```{r}
-dualplot(y1 = trans(tsm[,'BS'], unit=1/10^6, disYTD=T, naFill="locf", chg="ttm"), 
-         y2 = trans(tsm[,'BS'], chg="yoy"),
-         ylab = "Buildings Sold (RMB Tn TTM)", 
-         rylab = "YTD Change (%)")
-```
-
-## Real Estate: Floor Spaces
-
-```{r, warning=F}
-tsFSS = tsm[, c('FSS','FSSCBCB', 'FSCCBCB', 'FSCCBCB.')] %>% 
-  trans(unit=1/10^6, disYTD=T, naFill="locf", chg="ttm")
-colnames(tsFSS) = c("Sold (Sqm Bn TTM)", "Started", "Construction", "Completed")
-multiplot(tsFSS, screens=1:4, nc=2, col=1:4, xlab='', main='',cex.lab=0.8)
-```
-
-## Government Revenue and Expenditure
-
-```{r}
-tsm[,c('GR', 'GE')] %>% 
-  trans(unit=1/1000, disYTD=T, naFill="locf", chg="ttm") %>% 
-  multiplot(plot.type='s', col=1:2, xlab='', main='', 
-            ylab=c('Govt Rev. vs Exp. (RMB Tn TTM)'))
+subset(DTM, select=startsWith(colnames(DTM), "TB")) |> 
+  broom::tidy() |> 
+  ggplot(aes(x = index, y = value, col = series)) +
+  geom_line() + labs(x=NULL, y="Spot Yield %") + 
+  scale_x_continuous(n.breaks = 10) +
+  theme(legend.position = "bottom")
 ```
 
 ## Local Government Debt
 
 ```{r}
-tsm[, grep('LGDI', colnames(tsm))] %>% 
-  window(start=2018) %>% 
-  trans(unit=1/10^6, chg="ttm") %>% 
-  multiplot(plot.type="m", nc=2, col=1:4, xlab='', main='', cex.lab=0.8,
-    ylab=c("General (RMB Tn TTM)", "Special", "New Issued", "Refinance"))
+# data starts available in 2017
+# seasonal adjustment does not give sensible results due to limited observations
+window(DTM, start=2017) |> 
+  subset(select=startsWith(colnames(DTM), "Gov Debt")) |> 
+  trans(unit=1/1000, chg="ttm") |>
+  broom::tidy() |> 
+  tidyr::separate(series, c(NA, "name"), sep=": ") |>
+  ggplot(aes(x = index, y = value, col = name)) +
+  geom_line() + labs(x = NULL, y = "Debt Issuance (RMB Bn TTM)") +
+  facet_wrap(~name, scales = "free_y") +
+  scale_x_continuous(breaks = pretty)
 ```
 
-## Trade Balance
+## Import and Export
 
 ```{r}
-tsm[, c('ICIF', 'EFOB', 'TB')] %>% 
-  trans(unit=1/1000, seasAdj = "x11") %>% 
-  multiplot(screens=c(1,1,2), nc=2, col=1:3, xlab='', main='',
-            ylab=c("Import vs Export (USD Bn SA)", "Trade Balance"))
+subset(DTM, select=c(Import, Export)) |>
+  trans(unit=1/1000, seas = "x11a") |>
+  multiplot(screens=1, col=2:3, xlab='', main='',
+            ylab=c("Import vs Export (USD Bn SA)"))
 ```
 
-## Exchange Rate
+## Trade Balance and Exchange Rate
 
 ```{r}
-dualplot(y1 = tsm[,'TB'] %>% trans(unit=1/1000, seasAdj="x11"), 
-         y2 = 1/tsm[,'FXRPBOCMERMBUSD'], 
-         ylab = "Trade Balance (USD Bn SA)", 
-         rylab = "CNY / USD")
+dualplot(
+  y1 = DTM$`Trade Balance` |> trans(unit=1/1000, seas="x11a"), 
+  y2 = DTM$RMBUSD^(-1), 
+  ylab = "Trade Balance (USD Bn)", 
+  rylab = "CNY / USD")
 ```
 
 
 ## Balance of Payments
 
 ```{r}
-tidy(tsq[, grep('^BP', colnames(tsq))]) %>% 
-  mutate(series = factor(
-    series, 
-    levels = c("BPFARA","BPCACA","BPFAN","BPNEO"), 
-    labels = c("Reserve","C.A.","F.A.","Errors"))
-  ) %>% 
-  replace_na(list(value=0)) %>% 
+# Net Export: CR+; FDI Inflow: CR+; Forex Receipt: DR-; Reserve Accu.: DR-. 
+# Disguised capital outflow: 1. Export without cash receipt (Errors--); 
+# 2. Hide export or exaggerate import (shrinked C.A.); 3. Hided oversea 
+# investment (F.A.++Errors--). 4. Underground Forex exchange (no record)
+
+subset(DTQ, select=startsWith(colnames(DTQ), "BoP")) |> 
+  broom::tidy() |> 
+  tidyr::replace_na(list(value=0)) |> 
   ggplot(aes(index, value/1000, fill=series)) +
   geom_col(position = "stack") +
-  scale_fill_manual(values=2:5) +
+  scale_fill_manual(values=c(2,8,4,7)) +
   scale_x_continuous(breaks = scales::pretty_breaks()) +
-  labs(x = NULL, y = "BoP (Quarterly USD Bn)", fill=NULL, 
-       caption= str_glue(
-       "Net Export: CR+; FDI Inflow: CR+; Forex Receipt: DR-;Reserve Accu.: DR-. Disguised capital outflow:\ 
-       1. Export wihtout cash receipt (Errors--); 2. Hide export or exaggerate import (shrinked C.A.)\
-       3. Hided oversea investment (F.A.++Errors--). 4. Underground forex exchange (no record)"))+
-  theme_classic() 
+  labs(x = NULL, y = "BoP (Quarterly USD Bn)", fill=NULL) +
+  theme(legend.position = "bottom")
 ```
 
 ## RMB Assets Hold by Foreign Entities
 
 ```{r}
-tsm[, grep('DRMBFAHOE', colnames(tsm))] %>% window(start=2014) %>% 
-  multiplot(screens=1:4, nc=2, col=1:4, main='',xlab='',
-            ylab = c("Equity (RMB Bn)", "Bond", "Loan", "Deposit"))
+# SSE-HKSE connect is launched in 2014
+window(DTM, start=2014) |> 
+  subset(select=startsWith(colnames(DTM), "RMB:")) |> 
+  broom::tidy() |> 
+  tidyr::separate(series, c(NA, "name"), sep=": ") |>
+  ggplot(aes(x = index, y = value, col = name)) +
+  geom_line() + labs(x = NULL, y = "RMB Asset (Billion)") +
+  facet_wrap(~name, scales = "free_y") +
+  scale_x_continuous(breaks = pretty)
 ```
 
 ## Equity Market
 
 ```{r}
-tsm[, grep('ICSI300', colnames(tsm))] %>% window(start=2020) %>% 
-multiplot(plot.type="m", nc=4, col=1:12, mar=c(1,4,1,1), main='', xlab='', 
-          ylab=c("CSI 300", "Energy", "Material", "Industrial", "Cons. Disc.", 
-                 "Cons. Stap.", "Health Care", "Financial", "InfoTech", 
-                 "Telecom", "Utilities"), cex.lab=0.7)
+# only show most recent movement in equity index
+window(DTM, start=2018) |> 
+  subset(select=startsWith(colnames(DTM), "CSI")) |> 
+  trans(chg = "idx") |> 
+  broom::tidy() |> 
+  tidyr::separate(series, c(NA, "name"), sep=": ") |>
+  ggplot(aes(x = index, y = value, col = name)) +
+  geom_line() + labs(x = NULL, y = NULL) +
+  geom_abline(slope = 0, intercept = 1, col = "gray") +
+  facet_wrap(~name, scales = "free_y") +
+  scale_x_continuous(n.breaks = 4) +
+  labs(caption = "Indexes are normalized to start at 1")
 ```
 
 ## Commodity Market
 
 ```{r}
-tsm[, grep('^SP', colnames(tsm))] %>% window(start=2020) %>% 
-multiplot(plot.type="m", nc=3, col=1:7, mar=c(1,4,1,1), main='', xlab='',
-          ylab=c("Copper", "Steel Rebar", "Iron Ore", "Coke", "Rubber", "Soybean", "Cotton"))
-```
-
-## Bond Market
-
-```{r}
-tsm[, grep("BOPBC", colnames(tsm))] %>% 
-  window(start=2015) %>% trans(unit=1/10^6) %>% 
-  multiplot(plot.type="s", col=1:3, main='', xlab='', ylab="Bond Outstanding (RMB Tn)")
-legend('topleft', legend=c("Gov", "Fin", "Corp"), col=1:3, lwd=2)
-```
-
-## Bond Market
-
-```{r}
-tsm[, grep("BIPBC", colnames(tsm))] %>% 
-  window(start=2015) %>% trans(unit=1/10^6) %>% 
-  multiplot(plot.type="s", col=1:3, main='', xlab='', ylab="Bond Issuance (RMB Tn)")
-legend('topleft', legend=c("Gov", "Fin", "Corp"), col=1:3, lwd=2)
+window(DTM, start=2018) |> 
+  subset(select=startsWith(colnames(DTM), "SF")) |> 
+  trans(chg = "idx") |> 
+  broom::tidy() |> 
+  tidyr::separate(series, c(NA, "name"), sep=": ") |>
+  ggplot(aes(x = index, y = value, col = name)) +
+  geom_line() + labs(x = NULL, y = NULL) +
+  geom_abline(slope = 0, intercept = 1, col = "gray") +
+  facet_wrap(~name, scales = "free_y") +
+  scale_x_continuous(n.breaks = 4) +
+  labs(caption = "Indexes are normalized to start at 1")
 ```
 
 <!-- THE END -->

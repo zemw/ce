@@ -1,0 +1,148 @@
+srCode,seriesName,shortName
+SR92010057,CN: GDP,GDP
+SR290091,CN: GDP: ytd,GDP: ytd
+SR4824570,CN: GDP Index: QoQ: SA,GDP: QoQ
+SR4382056,CN: Share to GDP Growth: ytd: Final Consumption Expenditure,GDP: Final Consumption
+SR4382053,CN: Share to GDP Growth: ytd: Gross Capital Formation,GDP: Gross Capital Formation
+SR4382060,CN: Share to GDP Growth: ytd: Net Export of Goods and Service,GDP: Net Export
+SR568569,CN: Consumer Price Index,CPI
+SR1903868,CN: CPI: Core (excl. Food & Energy),CPI: Core
+SR71481,CN: Producer Price Index(PPI),PPI
+SR114392127,CN: Surveyed Unemployment Rate: Urban,Unemployment: Urban
+SR7299749,CN: Surveyed Unemployment Rate: Urban: 31 Major City,Unemployment: 31 Cities
+SR7419390,CN: Employment: Urban: New Increased: ytd,New Urban Employment: ytd
+SR126571397,CN: Leverage Ratio: Household,Leverage: Household
+SR126571407,CN: Leverage Ratio: Non-financial Enterprise,Leverage: Enterprise
+SR126571417,CN: Leverage Ratio: General Government,Leverage: Government
+SR126571447,CN: Leverage Ratio: Non-financial Sector,Leverage: Real Sector
+SR2426746,"CN: Purchasing Managers"" Index: Mfg",PMIM: Composite
+SR2426879,CN: PMI: Mfg: Production,PMIM: Production
+SR2426948,CN: PMI: Mfg: New Order,PMIM: New Order
+SR2426735,CN: PMI: Mfg: New Export Order,PMIM: New Export
+SR2426649,CN: PMI: Mfg: Backlog Order,PMIM: Backlog
+SR2426850,CN: PMI: Mfg: Finished Goods Inventory,PMIM: Final Good Inv
+SR2426534,CN: PMI: Mfg: Purchases,PMIM: Purchases
+SR2427084,CN: PMI: Mfg: Import,PMIM: Import
+SR2426823,CN: PMI: Mfg: Purchasing Price Index,PMIM: Purchase Price
+SR102030977,CN: PMI: Mfg: Producer Price Index,PMIM: Producer Price
+SR2426723,CN: PMI: Mfg: Raw Material Inventory,PMIM: Raw Material Inv
+SR2427061,CN: PMI: Mfg: Employment,PMIM: Employment
+SR2426973,"CN: PMI: Mfg: Suppliers"" Delivery Time",PMIM: Delivery Time
+SR6617090,CN: PMI: Mfg: Production and Business Expectation,PMIM: Expectation
+SR100308317,CN: PMI: Service: Business Activity,PMIS: Busi Activity
+SR100308327,CN: PMI: Service: New Order,PMIS: New Order
+SR100308347,CN: PMI: Service: Input Price,PMIS: Input Price
+SR100308357,CN: PMI: Service: Sales Price,PMIS: Sales Price
+SR100308367,CN: PMI: Service: Employment,PMIS: Employment
+SR100308377,CN: PMI: Service: Business Expectation,PMIS: Expectation
+SR100308387,CN: PMI: Construction: Business Activity,PMIC: Busi Activity
+SR100308397,CN: PMI: Construction: New Order,PMIC: New Order
+SR100308417,CN: PMI: Construction: Input Price,PMIC: Input Price
+SR100308427,CN: PMI: Construction: Sales Price,PMIC: Sales Price
+SR100308437,CN: PMI: Construction: Employment,PMIC: Employment
+SR100308447,CN: PMI: Construction: Business Expectation,PMIC: Expectation
+SR648084,CN: Retail Sales of Consumer Goods,RetailSales
+SR6193528,CN: Retail Sales of Consumer Goods: YoY(Real),RetailSales: yoy
+SR4824192,CN: Retail Sales of Consumer Goods: MoM: SA,RetailSales: mom
+SR88039527,CN: Online Retail Sales: ytd: Goods and Service,OnlineSales: ytd
+SR141272007,CN: Taobao and Tmall Online Sales: Value,OnlineSales: Value
+SR141272017,CN: Taobao and Tmall Online Sales: Volume,OnlineSales: Volume
+SR141272027,CN: Taobao and Tmall Online Sales: Product Average Price,OnlineSales: Price
+SR369164,CN: Industrial Enterprise: Sales Revenue: ytd,Industrial: Revenue: ytd
+SR369165,CN: Industrial Enterprise: Total Profit: ytd,Industrial: Profit: ytd
+SR107482807,CN: Industrial Enterprise: Inventory,Industrial: Inventory
+SR109648187,CN: Industrial Capacity Utilization Rate,Industrial Capacity Utilization
+SR484105,CN: Value Added of Industry: YoY(Real),VAI: yoy
+SR484123,CN: Value Added of Industry: YoY: ytd(Real),VAI: yoy: ytd
+SR4095413,CN: Value Added of Industry: MoM(Real): SA,VAI: mom
+SR308026,CN: Fixed Asset Investment: ytd,FAI: ytd
+SR6193531,CN: Fixed Asset Inv: YoY: ytd(Real),FAI: yoy: ytd
+SR4824299,CN: FAI: MoM: SA,FAI: mom
+SR537975,CN: Transport: Freight Traffic,Freight Traffic
+SR6587983,CN: Air: Passenger Traffic,Air Passengers
+SR198916,CN: Transport: Passenger Traffic,Passenger Traffic
+SR5902065,CN: Energy Production: ytd: Electricity,Electricity Production: ytd
+SR5902055,CN: Energy Production: YoY: ytd: Electricity,Electricity Production: yoy: ytd
+SR520550,CN: Real Estate Inv: ytd,Real Estate Inv: ytd
+SR234214,CN: Building Sold: ytd,Buildings Sold: ytd
+SR4540807,CN: Floor Space Started: ytd: Commodity Bldg (CB),Bld: Started: ytd
+SR245021,CN: Floor Space under Construction: ytd: Commodity Bldg (CB),Bld: Construction: ytd
+SR291000,CN: Floor Space Completed: ytd: Commodity Bldg (CB),Bld: Completed: ytd
+SR297586,CN: Floor Space Sold: ytd,Bld: Sold: ytd
+SR720196,CN: Govt Revenue,Govt Revenue
+SR720201,CN: Govt Expenditure,Govt Expenditure
+SR115184367,CN: Local Government Debt Issuance: General,Gov Debt: General
+SR115184377,CN: Local Government Debt Issuance: Special,Gov Debt: Special
+SR116528807,CN: Local Government Debt Issuance: New,Gov Debt: New
+SR116528817,CN: Local Government Debt Issuance: Replacement or Refinancing,Gov Debt: Refinance
+SR90482817,CN: BoP: Net Errors and Omissions,BoP: Errors
+SR90482767,CN: BoP: FA: Reserve Asset,BoP: Reserve
+SR90482407,CN: BoP: FA: Non-reserve,BoP: Financial Acct
+SR90481747,CN: BoP: Current Account(CA),BoP: Current Acct
+SR342570,CN: Trade Balance,Trade Balance
+SR342569,CN: Import CIF,Import
+SR342568,CN: Export FOB,Export
+SR6061,CN: FX Rate: PBOC: Month End: RMB to USD,RMBUSD
+SR7334937,CN: Domestic RMB Financial Asset Held by Overseas Entity: Equity,RMB: Equity
+SR7334938,CN: Domestic RMB Financial Asset Held by Overseas Entity: Bond,RMB: Bond
+SR7334940,CN: Domestic RMB Financial Asset Held by Overseas Entity: Loan,RMB: Loan
+SR7334939,CN: Domestic RMB Financial Asset Held by Overseas Entity: Deposit,RMB: Deposit
+SR2376470,CN: FDI: Utilized: ytd (annual data included all finance),FDI: ytd
+SR247539,CN: Index: CSI 300 Index,CSI: Composite
+SR3404655,CN: Index: CSI 300 Index: Energy,CSI: Energy
+SR3404636,CN: Index: CSI 300 Index: Material,CSI: Material
+SR3404661,CN: Index: CSI 300 Index: Industrial,CSI: Industrial
+SR3404625,CN: Index: CSI 300 Index: Consumer Discretionary,CSI: Cons Disc
+SR3404650,CN: Index: CSI 300 Index: Consumer Staples,CSI: Cons Stap
+SR3404639,CN: Index: CSI 300 Index: Health Care,CSI: Healthcare
+SR3404612,CN: Index: CSI 300 Index: Financial,CSI: Financial
+SR3404659,CN: Index: CSI 300 Index: Information Technology,CSI: Info Tech
+SR3404665,CN: Index: CSI 300 Index: Telecommunication Services,CSI: Telecom
+SR3404638,CN: Index: CSI 300 Index: Utilities,CSI: Utilities
+SR233988,CN: Settlement Price: Shanghai Futures Exchange: Copper: 1st Month,SF: Copper
+SR3687841,CN: Settlement Price: Shanghai Futures Exchange: Steel Rebar: 1st Month,SF: Rebar
+SR6918433,CN: Settlement Price: Dalian Commodity Exchange: Iron Ore: 1st Month,SF: Iron Ore
+SR6668113,CN: Settlement Price: Dalian Commodity Exchange: Coke: 1st Month,SF: Coke
+SR234002,CN: Settlement Price: Shanghai Futures Exchange: Rubber: 1st Month,SF: Rubber
+SR350826,CN: Settlement Price: Dalian Commodity Exchange: Soybean Meal: 1st Month,SF: Soybean
+SR538671,CN: Settlement Price: ZCE: Cotton: 1st Month,SF: Cotton
+SR100047077,CN: Bond Outstanding: PBC: Government Bond,BO: Government
+SR100047097,CN: Bond Outstanding: PBC: Financial Bond,BO: Financial
+SR100047107,CN: Bond Outstanding: PBC: Company Credit Bond,BO: Corporate
+SR100047017,CN: Bond Issuance: PBC: Government Bond,BI: Government
+SR100047037,CN: Bond Issuance: PBC: Financial Bond,BI: Finnancial
+SR100047047,CN: Bond Issuance: PBC: Company Credit Bond,BI: Corporate
+SR297451,CN: Money Supply M1,M1
+SR297454,CN: Money Supply M2,M2
+SR297460,CN: Money Supply M1: YoY,M1: yoy
+SR297463,CN: Money Supply M2: YoY: Quasi Money,M2: yoy
+SR5913165,CN: Aggregate Financing: New Increased,AFNI: Total
+SR5913168,CN: Aggregate Financing: New Increased: Loan in Local Currency,AFNI: Loan
+SR5913166,CN: Aggregate Financing: New Increased: Entrusted Loan,AFNI: Entrust
+SR5913163,CN: Aggregate Financing: New Increased: Trust Loan,AFNI: Trust
+SR5913161,"CN: Aggregate Financing: New Increased: Banker""s Acceptance Bill",AFNI: Bill
+SR5913164,CN: Aggregate Financing: New Increased: Net Corporate Bond Financing,AFNI: Bond
+SR118892887,CN: Aggregate Financing: New Increased: Government Bond,AFNI: Gov Bond
+SR5913167,CN: Aggregate Financing: New Increased: Non Financial Enterprise Equity Financing,AFNI: Equity
+SR116375807,CN: Aggregate Financing: New Increased: Other Financing: Depository Financial Inst. Asset-backed Securities,AFNI: Other
+SR3496791,CN: Loan: New Increased: Household: Short Term,Loan: Household: Short
+SR3496797,CN: Loan: New Increased: Household: Medium & Long Term,Loan: Household: Long
+SR3496799,CN: Loan: New Increased: Non Financial Enterprise and Govt Agency & Org: Short Term,Loan: Enterprise: Short
+SR3496800,CN: Loan: New Increased: Non Financial Enterprise and Govt Agency & Org: Bill Financing,Loan: Enterprise: Bill
+SR3496806,CN: Loan: New Increased: Non Financial Enterprise and Govt Agency & Org: Medium & Long Term,Loan: Enterprise: Long
+SR128159177,CN: Loan Prime Rate(LPR): 1 Year,LPR: 1Y
+SR128159187,CN: Loan Prime Rate(LPR): 5 Year,LPR: 5Y
+SR344486,CN: Interbank Bond Collateral Repo Rate: Weighted Avg: (R007) 7 Day,DR007
+SR1886882,CN: Shanghai Interbank Offered Rate (SHIBOR): 3 Month,SHIBOR3M
+SR3860341,CN: Treasury Bond Yield: Interbank: Spot Yield: 1 year,TB: 1Y
+SR3860421,CN: Treasury Bond Yield: Interbank: Spot Yield: 5 year,TB: 5Y
+SR3860443,CN: Treasury Bond Yield: Interbank: Spot Yield: 10 year,TB: 10Y
+SR4035157,CN: Industrial Production: Cement,IP: Cement
+SR4035558,CN: Industrial Production: Steel Product (SP),IP: Steel
+SR97594197,CN: Industrial Production: Industrial Robot,IP: Robot
+SR4035931,CN: Industrial Production: Automobile,IP: Automobile
+SR4035954,CN: Industrial Production: Lithium Ion Battery,IP: Lithium Battery
+SR4036155,CN: Industrial Production: Household Refrigerator,IP: Refrigerator
+SR4036011,CN: Industrial Production: Household Washing Machine,IP: Washing Machine
+SR4034594,CN: Industrial Production: Semiconductor Integrated Circuit,IP: Semiconductor
+SR4034249,CN: Industrial Production: Television Set: Colour,IP: Television

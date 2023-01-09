@@ -1,7 +1,7 @@
 # China Economy Snapshot
 
-This presentation provides a quick look at the recent development in the Chinese economy. 
+This presentation provides a snapshot of the recent development of the Chinese economy. 
 
-Latest presentation: [preview](https://zemw.github.io/ce/)
+Latest presentation: [download](https://github.com/zemw/ce/blob/main/charts.pdf)
 
 Data source: CEIC

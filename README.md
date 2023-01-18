@@ -1,6 +1,6 @@
 # Chinese Economy Chart Pack
 
-Latest chart pack: [download](https://github.com/zemw/ce/raw/main/charts.pdf)
+Latest chart pack: [download](https://github.com/zemw/ce/raw/main/releases/Latest.pdf)
 
 Data source: CEIC
 

@@ -1,22 +1,23 @@
 ---
 title: "Chinese Economy Chart Pack"
-date: "December 2022"
+date: "January 2022"
 output:
   beamer_presentation: default
   ioslides_presentation: default
 ---
 
-<!-- General Principles: -->
-<!-- * Faithful to official data; use interpolation as less as possible -->
-<!-- * Timely changes are most valuable; avoid using YTD or TTM, as they  -->
-<!--   dilute most recent changes -->
-<!-- * Time series are transformed to present in the most sensible way -->
-<!-- * Everything must be seasonally adjusted; X11 method is preferred -->
-<!-- * Titles need to be concise and informational; avoid abbreviations -->
-<!-- * Column names should be readable, avoid modify column names in code -->
-<!-- * Base plot style is preferred, even with ggplot -->
-<!-- * Avoid cutting short of time horizon, unless data is unavailable in -->
-<!--   early dates or the chart is overloaded with information -->
+<!-- General Principles:
+* Faithful to official data; use interpolation as less as possible
+* Timely changes are most valuable; avoid using YTD or TTM, as they
+  dilute most recent changes
+* Time series are transformed to present in the most sensible way
+* Everything must be seasonally adjusted; X11 method is preferred
+* Titles need to be concise and informational; avoid abbreviations
+* Column names should be readable, avoid modify column names in code
+* Base plot style is preferred, even with ggplot
+* Avoid cutting short of time horizon, unless data is unavailable in
+  early dates or the chart is overloaded with information 
+-->
 
 ```{r, include=F}
 library(ggplot2)
@@ -25,9 +26,16 @@ library(zoo)
 ```
 
 ```{r data-loading, include=F}
-df = parse2DF("data.m")
-dfn = read.csv("names.csv")
-df = merge(df, dfn, by = c("srCode", "seriesName"))
+df = parse2DF("../data/Chartpack.m")
+dfn = read.csv("../data/seriesNames.csv")
+df = dplyr::left_join(df, dfn, by = c("srCode", "seriesName"))
+# new series that does not match existing names
+if (anyNA(df$shortName)) {
+  warning("New series found that do not match any existing names.")
+  subset(df, select=c("srCode", "seriesName", "shortName")) |> 
+    write.csv(file = "../data/seriesNames-new.csv", row.names = F)
+}
+# partition data into monthly and quarterly data
 dfq = subset(df, frequency == "Quarterly")
 dfm = subset(df, frequency == "Monthly")
 DTQ = grabTS(dfq, out = "zoo") |> window(start=2012)
@@ -343,19 +351,64 @@ subset(DTM, select=startsWith(colnames(DTM), "TB")) |>
   theme(legend.position = "bottom")
 ```
 
-## Local Government Debt
+## Fiscal Revenue and Expenditure
+
+```{r}
+subset(DTM, select=startsWith(colnames(DTM), "Govt: Fiscal")) |> 
+  trans(YTD = "avg", seas = "x11") |> 
+  broom::tidy() |> 
+  tidyr::separate(series, c(NA, NA, "level", "type", NA), sep=": ") |> 
+  dplyr::filter(type %in% c("Revenue", "Expenditure")) |> 
+  ggplot(aes(x = index, y = value, col = type)) +
+  geom_line() + facet_wrap(~ level, scales = "free_y") +
+  labs(x = NULL, y = "RMB Billion") +
+  scale_x_continuous(breaks = pretty) +
+  theme(legend.position = "bottom", aspect.ratio = .8)
+```
+
+## Government Fund
+
+```{r}
+window(DTM, start=2014) |> 
+  subset(select=startsWith(colnames(DTM), "Govt: Fund")) |> 
+  trans(YTD = "avg", seas = "x11") |> 
+  broom::tidy() |> 
+  tidyr::separate(series, c(NA, NA, "level", "type", NA), sep=": ") |> 
+  ggplot(aes(x = index, y = value, col = type)) +
+  geom_line() + facet_wrap(~ level, scales = "free_y") +
+  labs(x = NULL, y = "RMB Billion") +  
+  scale_x_continuous(breaks = pretty) +
+  theme(legend.position = "bottom", aspect.ratio = .8)
+```
+
+## Government Financing
+
+```{r}
+window(DTM, start=2017) |> 
+  subset(select=startsWith(colnames(DTM), "Govt: Finance")) |> 
+  broom::tidy() |> 
+  tidyr::separate(series, c(NA, NA, "inst", "type"), sep=": ") |> 
+  dplyr::filter(is.na(type)) |> 
+  ggplot(aes(x = index, y = value/1000, col = inst)) +
+  geom_line() + facet_wrap(~ inst, scales = "free_y") +
+  labs(x = NULL, y = "Bond Issuance (RMB Billion)") +  
+  scale_x_continuous(breaks = pretty)
+```
+
+
+## Local Government Bond
 
 ```{r}
 # data starts available in 2017
 # seasonal adjustment does not give sensible results due to limited observations
 window(DTM, start=2017) |> 
-  subset(select=startsWith(colnames(DTM), "Gov Debt")) |> 
-  trans(unit=1/1000, chg="ttm") |>
+  subset(select=startsWith(colnames(DTM), "Govt: Finance")) |> 
   broom::tidy() |> 
-  tidyr::separate(series, c(NA, "name"), sep=": ") |>
-  ggplot(aes(x = index, y = value, col = name)) +
-  geom_line() + labs(x = NULL, y = "Debt Issuance (RMB Bn TTM)") +
-  facet_wrap(~name, scales = "free_y") +
+  tidyr::separate(series, c(NA, NA, "inst", "type"), sep=": ") |> 
+  dplyr::filter(!is.na(type)) |> 
+  ggplot(aes(x = index, y = value/1000, col = type)) +
+  geom_line() + facet_wrap(~ type, scales = "free_y") +
+  labs(x = NULL, y = "Bond Issuance (RMB Billion)") +  
   scale_x_continuous(breaks = pretty)
 ```
 

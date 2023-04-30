@@ -1,6 +1,6 @@
 ---
 title: "Chinese Economy Chart Pack"
-date: "January 2022"
+date: "Apr 2022"
 output:
   beamer_presentation: default
   ioslides_presentation: default
@@ -21,6 +21,7 @@ output:
 
 ```{r, include=F}
 library(ggplot2)
+library(forecast)
 library(csutil)
 library(zoo)
 ```
@@ -28,7 +29,7 @@ library(zoo)
 ```{r data-loading, include=F}
 df = parse2DF("../data/Chartpack.m")
 dfn = read.csv("../data/seriesNames.csv")
-df = dplyr::left_join(df, dfn, by = c("srCode", "seriesName"))
+df = merge(df, dfn, by = "srCode", all.x=T)
 # new series that does not match existing names
 if (anyNA(df$shortName)) {
   warning("New series found that do not match any existing names.")
@@ -67,20 +68,24 @@ for relying on the information provided.
 ## Gross Demestic Product
 
 ```{r}
+hp = DTQ$GDP |> x13seas() |> mFilter::hpfilter()
 dualplot(
-  y1 = DTQ$GDP |> trans(seas="x11", hp_filter="cycle"), 
-  y2 = (DTQ$`GDP: QoQ` - 100) * 4, 
-         lylim = c(-1000, 1000), rylim = c(-20,20),
-         ylab = "GDP Gap (HP-Filtered)", ylab.at = 0,
-         rylab = "Quarterly Growth %")
+  y1 = hp$cycle, 
+  y2 = DTQ$`GDP: QoQ` - 100, 
+  lylim = c(-1000, 1000), rylim = c(-5,5),
+  ylab = "GDP Gap (HP-Filtered)", ylab.at = 0,
+  rylab = "Quarterly Growth %")
 abline(h=0, col="gray")
 ```
 
 ## Inflation
 
 ```{r}
-dualplot(y1 = DTM$CPI -100, y2 = DTM$PPI - 100, 
-         ylab = "CPI (YoY)", rylab = "PPI (YoY)")
+dualplot(
+  y1 = DTM$CPI -100, 
+  y2 = DTM$PPI - 100, 
+  ylab = "CPI (YoY)", 
+  rylab = "PPI (YoY)")
 ```
 
 ## Unemployment
@@ -89,7 +94,8 @@ dualplot(y1 = DTM$CPI -100, y2 = DTM$PPI - 100,
 # surveyed unemployment rates are available from 2013
 with(window(DTM, start=2014), {
   dualplot(
-    y1 = `New Urban Employment: ytd` |> trans(unit=1/1000, YTD="avg", seas="x11"), 
+    y1 = `New Urban Employment: ytd` |> 
+      trans(multiplier=1/1000, ytd="diff_split", seas="x11", seas_cny=NULL), 
     y2 = `Unemployment: 31 Cities` |> na.approx(), 
     ylab  = "New Urban Employment (Million)", 
     rylab = "Unemployment Rate (31 Cities)")  
@@ -129,9 +135,9 @@ dualplot(
 # No missing values in Jan-Feb
 # FDI is less prone to LNY holiday; standard x11 applies
 dualplot(
-  y1 = DTM$`FDI: ytd` |> trans(unit=1/1000, YTD = "d", seas = "x11"), 
-  y2 = DTM$`FDI: ytd` |> trans(YTD = "d", chg="yoy"), 
-  ylab = "FDI (USD Bn)", rylab = "YoY Growth (%)") 
+  y1 = DTM$`FDI: ytd` |> trans(multiplier=1/1000, ytd = "diff", seas = "x11"), 
+  y2 = DTM$`FDI: ytd` |> trans(chg="yoy"), 
+  ylab = "FDI (USD Bn)", rylab = "YoY Growth (YTD %)") 
 ```
 
 ## National Debt / GDP
@@ -204,7 +210,8 @@ window(DTM, start=2016) |>
 # yoy series has missing values in January
 # imputation assumes it has the same value as February
 dualplot(
-  y1 = DTM$`Electricity Production: ytd` |> trans(YTD="avg", seas="x11"),
+  y1 = DTM$`Electricity Production: ytd` |> 
+    trans(ytd="diff_split", seas="x11", seas_cny=NULL),
   y2 = DTM$`Electricity Production: yoy: ytd` |> na.locf(fromLast=T), 
   ylab = "Electricity Production (kWH Mn)", 
   rylab = "YoY YTD change (%)")
@@ -217,7 +224,7 @@ dualplot(
 # seasonally-adjusted result for Freight Traffic is not smooth
 # significant structure break happens in Passenger Traffic in 2014
 subset(DTM, select=c(`Freight Traffic`, `Passenger Traffic`, `Air Passengers`)) |> 
-  trans(seas = "x11a") |> 
+  trans(seas = "x11", seas_cny = c(-20,20)) |> 
   window(start = 2016) |>
   broom::tidy() |> 
   ggplot(aes(x = index, y = value, col = series)) +
@@ -233,7 +240,7 @@ subset(DTM, select=c(`Freight Traffic`, `Passenger Traffic`, `Air Passengers`)) 
 ```{r, warning=F}
 # duplicated values in Jan/Feb
 subset(DTM, select=startsWith(colnames(DTM), "Bld")) |> 
-  trans(unit=1/1000, YTD = "avg", seas = "x11") |>
+  trans(multiplier=1/1000, ytd = "diff_split", seas = "x11", seas_cny=NULL) |>
   broom::tidy() |> 
   tidyr::separate(series, c(NA, "name", NA), sep=": ") |> 
   ggplot(aes(x = index, y = value, col = name)) +
@@ -247,8 +254,10 @@ subset(DTM, select=startsWith(colnames(DTM), "Bld")) |>
 ```{r}
 # Jan-Feb values are duplicates
 dualplot(
-  y1 = DTM$`Industrial: Revenue: ytd` |> trans(YTD="avg", seas="x11"),
-  y2 = DTM$`Industrial: Profit: ytd` |> trans(YTD="avg", seas="x11"),
+  y1 = DTM$`Industrial: Revenue: ytd` |> 
+    trans(ytd="diff_split", seas="x11", seas_cny=NULL),
+  y2 = DTM$`Industrial: Profit: ytd` |> 
+    trans(YTD="diff_split", seas="x11", seas_cny=NULL),
   ylab = "Industrial Revenue (RMB Bn)", 
   rylab = "Industrial Profit (RMB Bn)")
 ```
@@ -258,7 +267,7 @@ dualplot(
 ```{r}
 # missing values in both Jan and Feb; interpolation applies
 subset(DTM, select=startsWith(colnames(DTM), "IP")) |> 
-  trans(na_impute = "interp", seas = "x11") |> 
+  trans(na_impute = "interp", seas = "x11", seas_cny=NULL) |> 
   window(start=2016) |>
   broom::tidy() |> 
   tidyr::separate(series, c(NA, 'name'), sep=": ") |> 
@@ -276,7 +285,7 @@ subset(DTM, select=startsWith(colnames(DTM), "IP")) |>
 # official seasonally adjusted money aggregates are available
 # but they are not up-to-date
 dualplot(
-  y1 = DTM$M1 |> trans(seas="x11a") |> diff(),
+  y1 = DTM$M1 |> trans(seas="x11", seas_cny=c(-20,20)) |> diff(),
   y2 = DTM$`M1: yoy`, 
   ylab = "MoM Change (RMB Bn)", 
   rylab = "YoY Growth (%)")
@@ -287,7 +296,7 @@ abline(h=0, col="gray")
 
 ```{r}
 dualplot(
-  y1 = DTM$M2 |> trans(seas="x11a") |> diff(),
+  y1 = DTM$M2 |> trans(seas="x11", seas_cny=c(-20,20)) |> diff(),
   y2 = DTM$`M2: yoy`, 
   ylab = "MoM Change (RMB Bn)", 
   rylab = "YoY Growth (%)")
@@ -298,7 +307,7 @@ abline(h=0, col="gray")
 
 ```{r}
 subset(DTM, select=startsWith(colnames(DTM), "AFNI")) |> 
-  trans(seas = "x11a") |>
+  trans(seas = "x11", seas_cny=c(-20,20)) |>
   window(start = 2016) |>
   broom::tidy() |> 
   tidyr::separate(series, c(NA, 'name'), sep=": ") |> 
@@ -314,7 +323,7 @@ subset(DTM, select=startsWith(colnames(DTM), "AFNI")) |>
 
 ```{r}
 subset(DTM, select=startsWith(colnames(DTM), "Loan")) |> 
-  trans(seas = "x11a") |>
+  trans(seas = "x11", seas_cny = c(-20,20)) |>
   window(start = 2016) |>
   broom::tidy() |> 
   tidyr::separate(series, c("name", "type", "term"), sep = ": ") |> 
@@ -323,7 +332,8 @@ subset(DTM, select=startsWith(colnames(DTM), "Loan")) |>
   facet_wrap(~ type, scales = "free_y") +
   scale_x_continuous(breaks = pretty) +
   theme(legend.position = "bottom") + 
-  labs(x = NULL, y = NULL)
+  labs(x = NULL, y = NULL) +
+  theme(aspect.ratio = 1)
 ```
 
 
@@ -355,7 +365,7 @@ subset(DTM, select=startsWith(colnames(DTM), "TB")) |>
 
 ```{r}
 subset(DTM, select=startsWith(colnames(DTM), "Govt: Fiscal")) |> 
-  trans(YTD = "avg", seas = "x11") |> 
+  trans(ytd = "diff_split", seas = "x11", seas_cny=NULL) |> 
   broom::tidy() |> 
   tidyr::separate(series, c(NA, NA, "level", "type", NA), sep=": ") |> 
   dplyr::filter(type %in% c("Revenue", "Expenditure")) |> 
@@ -371,7 +381,7 @@ subset(DTM, select=startsWith(colnames(DTM), "Govt: Fiscal")) |>
 ```{r}
 window(DTM, start=2014) |> 
   subset(select=startsWith(colnames(DTM), "Govt: Fund")) |> 
-  trans(YTD = "avg", seas = "x11") |> 
+  trans(ytd = "diff_split", seas = "x11", seas_cny=NULL) |> 
   broom::tidy() |> 
   tidyr::separate(series, c(NA, NA, "level", "type", NA), sep=": ") |> 
   ggplot(aes(x = index, y = value, col = type)) +
@@ -416,7 +426,7 @@ window(DTM, start=2017) |>
 
 ```{r}
 subset(DTM, select=c(Import, Export)) |>
-  trans(unit=1/1000, seas = "x11a") |>
+  trans(multiplier=1/1000, seas = "x11", seas_cny=c(-20,20)) |>
   multiplot(screens=1, col=2:3, xlab='', main='',
             ylab=c("Import vs Export (USD Bn SA)"))
 ```
@@ -425,7 +435,8 @@ subset(DTM, select=c(Import, Export)) |>
 
 ```{r}
 dualplot(
-  y1 = DTM$`Trade Balance` |> trans(unit=1/1000, seas="x11a"), 
+  y1 = DTM$`Trade Balance` |> 
+    trans(multiplier=1/1000, seas="x11", seas_cny=c(-20,20)), 
   y2 = DTM$RMBUSD^(-1), 
   ylab = "Trade Balance (USD Bn)", 
   rylab = "CNY / USD")

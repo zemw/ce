@@ -1,6 +1,6 @@
 ---
 title: "Chinese Economy Chart Pack"
-date: "May 2022"
+date: "Sept 2023"
 output:
   beamer_presentation: default
   ioslides_presentation: default
@@ -135,7 +135,7 @@ dualplot(
 # No missing values in Jan-Feb
 # FDI is less prone to LNY holiday; standard x11 applies
 dualplot(
-  y1 = DTM$`FDI: ytd` |> trans(multiplier=1/1000, ytd = "diff", seas = "x11"), 
+  y1 = DTM$`FDI: ytd` |> trans(multiplier=1/1000, na_impute="interp", ytd = "diff", seas = "x11"), 
   y2 = DTM$`FDI: ytd` |> trans(na_impute="interp", chg="yoy"), 
   ylab = "FDI (USD Bn)", rylab = "YoY Growth (YTD %)") 
 ```
